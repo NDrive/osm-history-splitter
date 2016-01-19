@@ -4,7 +4,6 @@
 #include <osmium/io/any_output.hpp>
 
 #include "geometryreader.hpp"
-#include "growing_bitset.hpp"
 
 // information about a single extract
 class ExtractInfo {

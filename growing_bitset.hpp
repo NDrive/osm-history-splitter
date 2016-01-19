@@ -13,7 +13,7 @@ class growing_bitset {
     typedef std::vector<bool> bitvec_type;
     typedef bitvec_type* bitvec_ptr_type;
 
-    std::vector<bitvec_ptr_type> bitmap;
+    std::vector<std::unique_ptr<bitvec_type>> bitmap;
 
     static size_t segment(const osmium::object_id_type pos) {
         return pos / static_cast<osmium::object_id_type>(segment_size);
@@ -28,9 +28,10 @@ class growing_bitset {
             bitmap.resize(segment+1);
         }
 
-        auto ptr = bitmap[segment];
+        auto ptr = bitmap[segment].get();
         if (!ptr) {
-            bitmap[segment] = ptr = new std::vector<bool>(segment_size);
+            bitmap[segment].reset(new bitvec_type(segment_size));
+            return bitmap[segment].get();
         }
 
         return ptr;
@@ -41,16 +42,10 @@ class growing_bitset {
             return nullptr;
         }
 
-        return bitmap[segment];
+        return bitmap[segment].get();
     }
 
 public:
-
-    ~growing_bitset() {
-        for (auto ptr : bitmap) {
-            if (ptr) delete ptr;
-        }
-    }
 
     void set(const osmium::object_id_type pos) {
         bitvec_ptr_type bitvec = find_segment(segment(pos));
@@ -64,7 +59,7 @@ public:
     }
 
     void clear() {
-        for (auto ptr : bitmap) {
+        for (auto& ptr : bitmap) {
             ptr->clear();
         }
     }

@@ -2,6 +2,7 @@
 #define SPLITTER_SOFTCUT_HPP
 
 #include "cut.hpp"
+#include "growing_bitset.hpp"
 
 /*
 

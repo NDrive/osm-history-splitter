@@ -7,6 +7,7 @@
 #include <osmium/memory/buffer.hpp>
 
 #include "cut.hpp"
+#include "growing_bitset.hpp"
 
 /*
 
