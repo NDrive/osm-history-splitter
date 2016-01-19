@@ -2,74 +2,91 @@
 #define OSMIUMEX_GEOMBUILDER_HPP
 
 #include <string.h>
-#include <geos/util/GEOSException.h>
+
+#include <geos/geom/Coordinate.h>
+#include <geos/geom/CoordinateSequence.h>
+#include <geos/geom/CoordinateSequenceFactory.h>
+#include <geos/geom/GeometryFactory.h>
+#include <geos/geom/LinearRing.h>
 #include <geos/geom/MultiPolygon.h>
-#include <osmium/storage/byid/fixed_array.hpp>
-#include <osmium/handler/coordinates_for_ways.hpp>
-#include <osmium/geometry/point.hpp>
-#include <osmium/geometry/geos.hpp>
+#include <geos/geom/Point.h>
+#include <geos/geom/Polygon.h>
+#include <geos/geom/PrecisionModel.h>
+#include <geos/util/GEOSException.h>
+
+#include <osmium/handler.hpp>
+#include <osmium/handler/node_locations_for_ways.hpp>
+#include <osmium/index/map/dense_mem_array.hpp>
+#include <osmium/io/reader.hpp>
+#include <osmium/io/file.hpp>
+#include <osmium/visitor.hpp>
 
 
-typedef Osmium::Storage::ById::FixedArray<Osmium::OSM::Position> storage_array_t;
-typedef Osmium::Handler::CoordinatesForWays<storage_array_t, storage_array_t> cfw_handler_t;
+typedef osmium::index::map::DenseMemArray<osmium::unsigned_object_id_type, osmium::Location> storage_array_t;
+typedef osmium::handler::NodeLocationsForWays<storage_array_t, storage_array_t> cfw_handler_t;
 
 namespace OsmiumExtension {
 
-    class OsmGeometryReader : public Osmium::Handler::Base {
+    geos::geom::GeometryFactory* geos_factory() {
+        static std::unique_ptr<const geos::geom::PrecisionModel> precision_model{new geos::geom::PrecisionModel};
+        static std::unique_ptr<geos::geom::GeometryFactory> factory{new geos::geom::GeometryFactory(precision_model.get(), -1)};
+        return factory.get();
+    }
+
+    class OsmGeometryReader : public osmium::handler::Handler {
         std::vector<geos::geom::Geometry*> outer;
         storage_array_t store_pos;
         storage_array_t store_neg;
         cfw_handler_t* handler_cfw;
 
     private:
-            geos::geom::Geometry *polygonFromWay(const shared_ptr<Osmium::OSM::Way>& way) const {
-                if (!way->is_closed()) {
-                    std::cerr << "can't build way polygon geometry of unclosed way, leave it as NULL" << std::endl;
-                    return NULL;
+            geos::geom::Geometry *polygonFromWay(const osmium::Way& way) const {
+                if (!way.is_closed()) {
+                    std::cerr << "can't build way polygon geometry of unclosed way, leave it as nullptr" << std::endl;
+                    return nullptr;
                 }
                 try {
                     std::vector<geos::geom::Coordinate> *c = new std::vector<geos::geom::Coordinate>;
-                    const Osmium::OSM::WayNodeList nodes = way->nodes();
-                    for (osm_sequence_id_t i=0; i < nodes.size(); ++i) {
-                        c->push_back(Osmium::Geometry::create_geos_coordinate(nodes[i].position()));
+
+                    for (const auto& node_ref : way.nodes()) {
+                        c->emplace_back(node_ref.location().lon(), node_ref.location().lat());
                     }
-                    geos::geom::CoordinateSequence *cs = Osmium::Geometry::geos_geometry_factory()->getCoordinateSequenceFactory()->create(c);
-                    geos::geom::LinearRing *ring = Osmium::Geometry::geos_geometry_factory()->createLinearRing(cs);
-                    return (geos::geom::Geometry *) Osmium::Geometry::geos_geometry_factory()->createPolygon(ring, NULL);
+
+                    geos::geom::CoordinateSequence *cs = geos_factory()->getCoordinateSequenceFactory()->create(c);
+                    geos::geom::LinearRing *ring = geos_factory()->createLinearRing(cs);
+                    return static_cast<geos::geom::Geometry *>(geos_factory()->createPolygon(ring, nullptr));
                 } catch (const geos::util::GEOSException& exc) {
-                    std::cerr << "error building way geometry, leave it as NULL" << std::endl;
-                    return NULL;
+                    std::cerr << "error building way geometry, leave it as nullptr" << std::endl;
+                    return nullptr;
                 }
             }
 
     public:
-        OsmGeometryReader() : Base(), store_pos(5000), store_neg(1000) {
+        OsmGeometryReader() :
+            Handler(),
+            store_pos(5000),
+            store_neg(1000) {
             handler_cfw = new cfw_handler_t(store_pos, store_neg);
         }
 
         virtual ~OsmGeometryReader() {
             delete handler_cfw;
 
-            geos::geom::GeometryFactory *f = Osmium::Geometry::geos_geometry_factory();
             for (uint32_t i=0; i < outer.size(); i++) {
-                f->destroyGeometry(outer[i]);
+                geos_factory()->destroyGeometry(outer[i]);
             }
             outer.clear();
         }
 
-        void init(Osmium::OSM::Meta& meta) {
-            handler_cfw->init(meta);
-        }
-
-        void node(const shared_ptr<Osmium::OSM::Node const>& node) {
+        void node(const osmium::Node& node) {
             handler_cfw->node(node);
         }
 
-        void way(const shared_ptr<Osmium::OSM::Way>& way) {
+        void way(osmium::Way& way) {
             handler_cfw->way(way);
 
-            if (!way->is_closed()) {
-                std::cerr << "open way " << way->id() << " in osm-input" << std::endl;
+            if (!way.is_closed()) {
+                std::cerr << "open way " << way.id() << " in osm-input" << std::endl;
                 return;
             }
 
@@ -81,23 +98,13 @@ namespace OsmiumExtension {
             outer.push_back(geom);
         }
 
-        void after_nodes() {
-            handler_cfw->after_nodes();
-        }
-
-        void final() {
-            handler_cfw->final();
-        }
-
         geos::geom::Geometry *buildGeom() const {
-            // shorthand to the geometry factory
-            geos::geom::GeometryFactory *f = Osmium::Geometry::geos_geometry_factory();
             geos::geom::MultiPolygon *outerPoly;
             try {
-                outerPoly = f->createMultiPolygon(outer);
+                outerPoly = geos_factory()->createMultiPolygon(outer);
             } catch(geos::util::GEOSException e) {
                 std::cerr << "error creating multipolygon: " << e.what() << std::endl;
-                return NULL;
+                return nullptr;
             }
             return outerPoly;
         }
@@ -125,14 +132,12 @@ namespace OsmiumExtension {
          * geos::algorithm::locate::IndexedPointInAreaLocator to check for nodes
          * being located inside the polygon.
          *
-         * this method returns NULL if the .poly file can't be read.
+         * this method returns nullptr if the .poly file can't be read.
          */
         static geos::geom::Geometry *fromPolyFile(const std::string &file) {
-            // shorthand to the geometry factory
-            geos::geom::GeometryFactory *f = Osmium::Geometry::geos_geometry_factory();
 
             // pointer to coordinate vector
-            std::vector<geos::geom::Coordinate> *c = NULL;
+            std::vector<geos::geom::Coordinate> *c = nullptr;
 
             // vectors of outer and inner polygons
             std::vector<geos::geom::Geometry*> *outer = new std::vector<geos::geom::Geometry*>();
@@ -142,7 +147,7 @@ namespace OsmiumExtension {
             FILE *fp = fopen(file.c_str(), "r");
             if(!fp) {
                 std::cerr << "unable to open polygon file " << file << std::endl;
-                return NULL;
+                return nullptr;
             }
 
             // line buffer
@@ -151,7 +156,7 @@ namespace OsmiumExtension {
             // read title line
             if(!fgets(line, polyfile_linelen-1, fp)) {
                 std::cerr << "unable to read title line from polygon file " << file << std::endl;
-                return NULL;
+                return nullptr;
             }
             line[polyfile_linelen-1] = '\0';
 
@@ -169,7 +174,7 @@ namespace OsmiumExtension {
                 // read a line
                 if(!fgets(line, polyfile_linelen-1, fp)) {
                     std::cerr << "unable to read line from polygon file " << file << std::endl;
-                    return NULL;
+                    return nullptr;
                 }
                 line[polyfile_linelen-1] = '\0';
 
@@ -197,7 +202,7 @@ namespace OsmiumExtension {
                     if(0 == strncmp(line, "END", 3)) {
                         if(!c) {
                             std::cerr << "empty polygon file" << std::endl;
-                            return NULL;
+                            return nullptr;
                         }
 
                         // check if the polygon is closed
@@ -209,15 +214,15 @@ namespace OsmiumExtension {
                         // build a polygon from the coordinate vector
                         geos::geom::Geometry* poly;
                         try {
-                            poly = f->createPolygon(
-                                f->createLinearRing(
-                                    f->getCoordinateSequenceFactory()->create(c)
+                            poly = geos_factory()->createPolygon(
+                                geos_factory()->createLinearRing(
+                                    geos_factory()->getCoordinateSequenceFactory()->create(c)
                                 ),
-                                NULL
+                                nullptr
                             );
                         } catch(geos::util::GEOSException e) {
                             std::cerr << "error creating polygon: " << e.what() << std::endl;
-                            return NULL;
+                            return nullptr;
                         }
 
                         // add it to the appropriate polygon vector
@@ -235,7 +240,7 @@ namespace OsmiumExtension {
                         // try to parse it using sscanf
                         if(2 != sscanf(line, " %lE %lE", &x, &y)) {
                             std::cerr << "unable to parse line from polygon file " << file << ": " << line;
-                            return NULL;
+                            return nullptr;
                         }
 
                         // push the parsed coordinate into the coordinate vector
@@ -247,7 +252,7 @@ namespace OsmiumExtension {
             // check that the file ended with END
             if(0 != strncmp(line, "END", 3)) {
                 std::cerr << "polygon file " << file << " does not end with END token" << std::endl;
-                return NULL;
+                return nullptr;
             }
 
             // close the file pointer
@@ -256,18 +261,18 @@ namespace OsmiumExtension {
             // build MultiPolygons from the vectors of outer and inner polygons
             geos::geom::Geometry *poly;
             try {
-                geos::geom::MultiPolygon *outerPoly = f->createMultiPolygon(outer);
-                geos::geom::MultiPolygon *innerPoly = f->createMultiPolygon(inner);
+                geos::geom::MultiPolygon *outerPoly = geos_factory()->createMultiPolygon(outer);
+                geos::geom::MultiPolygon *innerPoly = geos_factory()->createMultiPolygon(inner);
 
                 // generate a MultiPolygon containing the difference of those two
                 poly = outerPoly->difference(innerPoly);
 
                 // destroy the both MultiPolygons
-                f->destroyGeometry(outerPoly);
-                f->destroyGeometry(innerPoly);
+                geos_factory()->destroyGeometry(outerPoly);
+                geos_factory()->destroyGeometry(innerPoly);
             } catch(geos::util::GEOSException e) {
                 std::cerr << "error creating differential multipolygon: " << e.what() << std::endl;
-                return NULL;
+                return nullptr;
             }
 
             // and return their difference
@@ -275,10 +280,11 @@ namespace OsmiumExtension {
         } // fromPolyFile
 
         static geos::geom::Geometry *fromOsmFile(const std::string &file) {
-            Osmium::OSMFile infile(file);
-            OsmiumExtension::OsmGeometryReader reader;
-            Osmium::Input::read(infile, reader);
-            geos::geom::Geometry *geom = reader.buildGeom();
+            osmium::io::File infile(file);
+            OsmiumExtension::OsmGeometryReader reader_handler;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, reader_handler);
+            geos::geom::Geometry *geom = reader_handler.buildGeom();
 
             return geom;
         }
@@ -286,13 +292,13 @@ namespace OsmiumExtension {
         /**
          * construct a geos Geometry from a BoundingBox string.
          *
-         * this method returns NULL if the string can't be read.
+         * this method returns nullptr if the string can't be read.
          */
         static geos::geom::Geometry *fromBBox(const std::string &bbox) {
             double minlon, minlat, maxlon, maxlat;
             if(4 != sscanf(bbox.c_str(), "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat)) {
                 std::cerr << "invalid BBox string: " << bbox << std::endl;
-                return NULL;
+                return nullptr;
             }
 
             // build the Geometry from the coordinates
@@ -302,7 +308,7 @@ namespace OsmiumExtension {
         static geos::geom::Geometry *fromBBox(double minlon, double minlat, double maxlon, double maxlat) {
             // create an Envelope and convert it to a polygon
             geos::geom::Envelope *e = new geos::geom::Envelope(minlon, maxlon, minlat, maxlat);
-            geos::geom::Geometry *p = Osmium::Geometry::geos_geometry_factory()->toGeometry(e);
+            geos::geom::Geometry *p = geos_factory()->toGeometry(e);
 
             delete e;
             return p;
@@ -310,6 +316,6 @@ namespace OsmiumExtension {
 
     }; // class GeomBuilder
 
-} // namespace Osmium
+} // namespace OsmiumExtension
 
 #endif // OSMIUMEX_GEOMBUILDER_HPP

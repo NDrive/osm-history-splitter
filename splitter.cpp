@@ -5,14 +5,10 @@
 #include <getopt.h>
 #include <unistd.h>
 
-#define OSMIUM_MAIN
-#define OSMIUM_WITH_PBF_INPUT
-#define OSMIUM_WITH_XML_INPUT
-#define OSMIUM_WITH_PBF_OUTPUT
-#define OSMIUM_WITH_XML_OUTPUT
-#include <osmium.hpp>
-#include <osmium/output/pbf.hpp>
-#include <osmium/output/xml.hpp>
+#include <osmium/io/any_input.hpp>
+#include <osmium/io/any_output.hpp>
+#include <osmium/io/file.hpp>
+#include <osmium/io/reader.hpp>
 
 #include <geos/geom/MultiPolygon.h>
 #include <geos/algorithm/locate/IndexedPointInAreaLocator.h>
@@ -65,7 +61,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    Osmium::OSMFile infile(filename);
+    osmium::io::File infile(filename);
 
     if(softcut) {
         SoftcutInfo info;
@@ -75,13 +71,21 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
-        SoftcutPassOne one(&info);
-        one.debug = debug;
-        Osmium::Input::read(infile, one);
+        {
+            SoftcutPassOne one(&info);
+            one.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, one);
+            reader.close();
+        }
 
-        SoftcutPassTwo two(&info);
-        two.debug = debug;
-        Osmium::Input::read(infile, two);
+        {
+            SoftcutPassTwo two(&info);
+            two.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, two);
+            reader.close();
+        }
     } else {
         HardcutInfo info;
         if(!readConfig(conffile, info))
@@ -92,7 +96,8 @@ int main(int argc, char *argv[]) {
 
         Hardcut cutter(&info);
         cutter.debug = debug;
-        Osmium::Input::read(infile, cutter);
+        osmium::io::Reader reader(infile);
+        osmium::apply(reader, cutter);
     }
 
     return 0;
@@ -116,7 +121,7 @@ template <class TExtractInfo> bool readConfig(char *conffile, CutInfo<TExtractIn
         int n = 0;
         char *tok = strtok(line, "\t ");
 
-        const char *name = NULL;
+        const char *name = nullptr;
         double minlon = 0, minlat = 0, maxlon = 0, maxlat = 0;
         char type = '\0';
         char file[linelen];
@@ -175,7 +180,7 @@ template <class TExtractInfo> bool readConfig(char *conffile, CutInfo<TExtractIn
                     break;
             }
 
-            tok = strtok(NULL, "\t ");
+            tok = strtok(nullptr, "\t ");
             n++;
         }
     }

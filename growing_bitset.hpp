@@ -5,6 +5,8 @@
 #include <vector>
 #include <memory>
 
+#include <osmium/osm/types.hpp>
+
 class growing_bitset
 {
 private:
@@ -31,7 +33,7 @@ private:
 
     bitvec_ptr_t find_segment (size_t segment) const {
         if (segment >= bitmap.size()) {
-            return NULL;
+            return nullptr;
         }
 
         return bitmap.at(segment);
@@ -45,23 +47,23 @@ public:
         }
     }
 
-    void set(const osm_object_id_t pos) {
+    void set(const osmium::object_id_type pos) {
         size_t
-            segment = static_cast<osm_object_id_t>(pos) / static_cast<osm_object_id_t>(segment_size),
-            segmented_pos = static_cast<osm_object_id_t>(pos) % static_cast<osm_object_id_t>(segment_size);
+            segment = static_cast<osmium::object_id_type>(pos) / static_cast<osmium::object_id_type>(segment_size),
+            segmented_pos = static_cast<osmium::object_id_type>(pos) % static_cast<osmium::object_id_type>(segment_size);
 
         bitvec_ptr_t bitvec = find_segment(segment);
         bitvec->at(segmented_pos) = true;
     }
 
-    bool get(const osm_object_id_t pos) const {
+    bool get(const osmium::object_id_type pos) const {
         size_t
-            segment = static_cast<osm_object_id_t>(pos) / static_cast<osm_object_id_t>(segment_size),
-            segmented_pos = static_cast<osm_object_id_t>(pos) % static_cast<osm_object_id_t>(segment_size);
+            segment = static_cast<osmium::object_id_type>(pos) / static_cast<osmium::object_id_type>(segment_size),
+            segmented_pos = static_cast<osmium::object_id_type>(pos) % static_cast<osmium::object_id_type>(segment_size);
 
         bitvec_ptr_t bitvec = find_segment(segment);
         if(!bitvec) return false;
-        return (bool)bitvec->at(segmented_pos);
+        return static_cast<bool>(bitvec->at(segmented_pos));
     }
 
     void clear() {
