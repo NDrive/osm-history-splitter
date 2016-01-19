@@ -1,7 +1,7 @@
 #ifndef OSMIUMEX_GEOMBUILDER_HPP
 #define OSMIUMEX_GEOMBUILDER_HPP
 
-#include <string.h>
+#include <cstring>
 
 #include <geos/geom/Coordinate.h>
 #include <geos/geom/CoordinateSequence.h>
@@ -17,8 +17,8 @@
 #include <osmium/handler.hpp>
 #include <osmium/handler/node_locations_for_ways.hpp>
 #include <osmium/index/map/dense_mem_array.hpp>
-#include <osmium/io/reader.hpp>
 #include <osmium/io/file.hpp>
+#include <osmium/io/reader.hpp>
 #include <osmium/visitor.hpp>
 
 

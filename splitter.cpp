@@ -1,12 +1,12 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <errno.h>
 
+#include <cerrno>
+#include <cstdio>
+#include <cstdlib>
 #include <getopt.h>
+#include <string>
 #include <unistd.h>
 
 #include <osmium/io/any_input.hpp>
-#include <osmium/io/any_output.hpp>
 #include <osmium/io/file.hpp>
 #include <osmium/io/reader.hpp>
 
@@ -16,99 +16,13 @@
 #include "softcut.hpp"
 #include "hardcut.hpp"
 
-template <class TExtractInfo> bool readConfig(char *conffile, CutInfo<TExtractInfo> &info);
-
-int main(int argc, char *argv[]) {
-    bool softcut = true;
-    bool debug = false;
-    char *filename, *conffile;
-
-    static struct option long_options[] = {
-        {"debug",               no_argument, 0, 'd'},
-        {"softcut",             no_argument, 0, 's'},
-        {"hardcut",             no_argument, 0, 'h'},
-        {0, 0, 0, 0}
-    };
-
-    while (1) {
-        int c = getopt_long(argc, argv, "dsh", long_options, 0);
-        if (c == -1)
-            break;
-
-        switch (c) {
-            case 'd':
-                debug = true;
-                break;
-            case 's':
-                softcut = true;
-                break;
-            case 'h':
-                softcut = false;
-                break;
-        }
-    }
-
-    if (optind > argc-2) {
-        std::cerr << "Usage: " << argv[0] << " [OPTIONS] OSMFILE CONFIGFILE" << std::endl;
-        return 1;
-    }
-
-    filename = argv[optind];
-    conffile = argv[optind+1];
-
-    if(softcut & !strcmp(filename, "-")) {
-        std::cerr << "Can't read from stdin when in softcut" << std::endl;
-        return 1;
-    }
-
-    osmium::io::File infile(filename);
-
-    if(softcut) {
-        SoftcutInfo info;
-        if(!readConfig(conffile, info))
-        {
-            std::cerr << "error reading config" << std::endl;
-            return 1;
-        }
-
-        {
-            SoftcutPassOne one(&info);
-            one.debug = debug;
-            osmium::io::Reader reader(infile);
-            osmium::apply(reader, one);
-            reader.close();
-        }
-
-        {
-            SoftcutPassTwo two(&info);
-            two.debug = debug;
-            osmium::io::Reader reader(infile);
-            osmium::apply(reader, two);
-            reader.close();
-        }
-    } else {
-        HardcutInfo info;
-        if(!readConfig(conffile, info))
-        {
-            std::cerr << "error reading config" << std::endl;
-            return 1;
-        }
-
-        Hardcut cutter(&info);
-        cutter.debug = debug;
-        osmium::io::Reader reader(infile);
-        osmium::apply(reader, cutter);
-    }
-
-    return 0;
-}
-
-template <class TExtractInfo> bool readConfig(char *conffile, CutInfo<TExtractInfo> &info) {
+template <typename TExtractInfo>
+bool readConfig(const std::string& conffile, CutInfo<TExtractInfo> &info) {
     const int linelen = 4096;
 
-    FILE *fp = fopen(conffile, "r");
+    FILE *fp = fopen(conffile.c_str(), "r");
     if(!fp) {
-        std::cerr << "unable to open config file " << conffile << std::endl;
+        std::cerr << "unable to open config file " << conffile << "\n";
         return false;
     }
 
@@ -141,7 +55,7 @@ template <class TExtractInfo> bool readConfig(char *conffile, CutInfo<TExtractIn
                         type = 'o';
                     else {
                         type = '\0';
-                        std::cerr << "output " << name << " of type " << tok << ": unknown output type" << std::endl;
+                        std::cerr << "output " << name << " of type " << tok << ": unknown output type\n";
                         return false;
                     }
                     break;
@@ -152,7 +66,7 @@ template <class TExtractInfo> bool readConfig(char *conffile, CutInfo<TExtractIn
                             if(4 == sscanf(tok, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat)) {
                                 info.addExtract(name, minlat, minlon, maxlat, maxlon);
                             } else {
-                                std::cerr << "error reading BBOX " << tok << " for " << name << std::endl;
+                                std::cerr << "error reading BBOX " << tok << " for " << name << "\n";
                                 return false;
                             }
                             break;
@@ -160,7 +74,7 @@ template <class TExtractInfo> bool readConfig(char *conffile, CutInfo<TExtractIn
                             if(1 == sscanf(tok, "%s", file)) {
                                 geos::geom::Geometry *geom = OsmiumExtension::GeometryReader::fromPolyFile(file);
                                 if(!geom) {
-                                    std::cerr << "error creating geometry from poly-file " << file << " for " << name << std::endl;
+                                    std::cerr << "error creating geometry from poly-file " << file << " for " << name << "\n";
                                     break;
                                 }
                                 info.addExtract(name, geom);
@@ -170,7 +84,7 @@ template <class TExtractInfo> bool readConfig(char *conffile, CutInfo<TExtractIn
                             if(1 == sscanf(tok, "%s", file)) {
                                 geos::geom::Geometry *geom = OsmiumExtension::GeometryReader::fromOsmFile(file);
                                 if(!geom) {
-                                    std::cerr << "error creating geometry from poly-file " << file << " for " << name << std::endl;
+                                    std::cerr << "error creating geometry from poly-file " << file << " for " << name << "\n";
                                     break;
                                 }
                                 info.addExtract(name, geom);
@@ -186,5 +100,88 @@ template <class TExtractInfo> bool readConfig(char *conffile, CutInfo<TExtractIn
     }
     fclose(fp);
     return true;
+}
+
+int main(int argc, char *argv[]) {
+    bool softcut = true;
+    bool debug = false;
+
+    static struct option long_options[] = {
+        {"debug",   no_argument, 0, 'd'},
+        {"softcut", no_argument, 0, 's'},
+        {"hardcut", no_argument, 0, 'h'},
+        {0, 0, 0, 0}
+    };
+
+    while (true) {
+        int c = getopt_long(argc, argv, "dsh", long_options, 0);
+        if (c == -1)
+            break;
+
+        switch (c) {
+            case 'd':
+                debug = true;
+                break;
+            case 's':
+                softcut = true;
+                break;
+            case 'h':
+                softcut = false;
+                break;
+        }
+    }
+
+    if (optind > argc-2) {
+        std::cerr << "Usage: " << argv[0] << " [OPTIONS] OSMFILE CONFIGFILE\n";
+        return 1;
+    }
+
+    std::string filename{argv[optind]};
+    std::string conffile{argv[optind+1]};
+
+    if (softcut && filename == "-") {
+        std::cerr << "Can't read from stdin when in softcut\n";
+        return 1;
+    }
+
+    osmium::io::File infile(filename);
+
+    if (softcut) {
+        SoftcutInfo info;
+        if (!readConfig(conffile, info)) {
+            std::cerr << "error reading config\n";
+            return 1;
+        }
+
+        {
+            SoftcutPassOne one(&info);
+            one.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, one);
+            reader.close();
+        }
+
+        {
+            SoftcutPassTwo two(&info);
+            two.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, two);
+            reader.close();
+        }
+    } else {
+        HardcutInfo info;
+        if (!readConfig(conffile, info)) {
+            std::cerr << "error reading config\n";
+            return 1;
+        }
+
+        Hardcut cutter(&info);
+        cutter.debug = debug;
+        osmium::io::Reader reader(infile);
+        osmium::apply(reader, cutter);
+        reader.close();
+    }
+
+    return 0;
 }
 

@@ -1,8 +1,8 @@
 #ifndef SPLITTER_CUT_HPP
 #define SPLITTER_CUT_HPP
 
-#include <geos/io/WKTWriter.h>
 #include <osmium/io/any_output.hpp>
+
 #include "geometryreader.hpp"
 #include "growing_bitset.hpp"
 
@@ -86,8 +86,7 @@ protected:
 public:
     std::vector<TExtractInfo*> extracts;
 
-
-    TExtractInfo *addExtract(std::string name, double minlon, double minlat, double maxlon, double maxlat) {
+    TExtractInfo *addExtract(const std::string& name, double minlon, double minlat, double maxlon, double maxlat) {
         std::cerr << "opening writer for " << name.c_str() << std::endl;
         osmium::io::File outfile(name);
 
@@ -108,7 +107,7 @@ public:
         return ex;
     }
 
-    TExtractInfo *addExtract(std::string name, geos::geom::Geometry *poly) {
+    TExtractInfo *addExtract(const std::string& name, geos::geom::Geometry *poly) {
         std::cerr << "opening writer for " << name.c_str() << std::endl;
         osmium::io::File outfile(name);
 
