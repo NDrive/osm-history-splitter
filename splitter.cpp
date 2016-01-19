@@ -21,15 +21,15 @@ bool readConfig(const std::string& conffile, CutInfo<TExtractInfo> &info) {
     const int linelen = 4096;
 
     FILE *fp = fopen(conffile.c_str(), "r");
-    if(!fp) {
+    if (!fp) {
         std::cerr << "unable to open config file " << conffile << "\n";
         return false;
     }
 
     char line[linelen];
-    while(fgets(line, linelen-1, fp)) {
+    while (fgets(line, linelen-1, fp)) {
         line[linelen-1] = '\0';
-        if(line[0] == '#' || line[0] == '\r' || line[0] == '\n' || line[0] == '\0')
+        if (line[0] == '#' || line[0] == '\r' || line[0] == '\n' || line[0] == '\0')
             continue;
 
         int n = 0;
@@ -40,18 +40,18 @@ bool readConfig(const std::string& conffile, CutInfo<TExtractInfo> &info) {
         char type = '\0';
         char file[linelen];
 
-        while(tok) {
+        while (tok) {
             switch(n) {
                 case 0:
                     name = tok;
                     break;
 
                 case 1:
-                    if(0 == strcmp("BBOX", tok))
+                    if (0 == strcmp("BBOX", tok))
                         type = 'b';
-                    else if(0 == strcmp("POLY", tok))
+                    else if (0 == strcmp("POLY", tok))
                         type = 'p';
-                    else if(0 == strcmp("OSM", tok))
+                    else if (0 == strcmp("OSM", tok))
                         type = 'o';
                     else {
                         type = '\0';
@@ -63,7 +63,7 @@ bool readConfig(const std::string& conffile, CutInfo<TExtractInfo> &info) {
                 case 2:
                     switch(type) {
                         case 'b':
-                            if(4 == sscanf(tok, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat)) {
+                            if (4 == sscanf(tok, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat)) {
                                 info.addExtract(name, minlat, minlon, maxlat, maxlon);
                             } else {
                                 std::cerr << "error reading BBOX " << tok << " for " << name << "\n";
@@ -71,9 +71,9 @@ bool readConfig(const std::string& conffile, CutInfo<TExtractInfo> &info) {
                             }
                             break;
                         case 'p':
-                            if(1 == sscanf(tok, "%s", file)) {
+                            if (1 == sscanf(tok, "%s", file)) {
                                 geos::geom::Geometry *geom = OsmiumExtension::GeometryReader::fromPolyFile(file);
-                                if(!geom) {
+                                if (!geom) {
                                     std::cerr << "error creating geometry from poly-file " << file << " for " << name << "\n";
                                     break;
                                 }
@@ -81,9 +81,9 @@ bool readConfig(const std::string& conffile, CutInfo<TExtractInfo> &info) {
                             }
                             break;
                         case 'o':
-                            if(1 == sscanf(tok, "%s", file)) {
+                            if (1 == sscanf(tok, "%s", file)) {
                                 geos::geom::Geometry *geom = OsmiumExtension::GeometryReader::fromOsmFile(file);
-                                if(!geom) {
+                                if (!geom) {
                                     std::cerr << "error creating geometry from poly-file " << file << " for " << name << "\n";
                                     break;
                                 }

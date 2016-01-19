@@ -88,39 +88,36 @@ public:
 
 
 class SoftcutPassOne : public Cut<SoftcutInfo> {
-private:
+
     osmium::object_id_type current_way_id;
-    typedef std::set<osmium::object_id_type> current_way_nodes_t;
-    typedef std::set<osmium::object_id_type>::iterator current_way_nodes_it;
-    current_way_nodes_t current_way_nodes;
+    std::set<osmium::object_id_type> current_way_nodes;
 
     // - walk over all bboxes
     //   - if the way-id is in the bboxes way-id-tracker (in other words: the way is in the output)
     //     - append all nodes of the current-way-nodes set to the extra-node-tracker
     void write_way_extra_nodes() {
-        if(debug) std::cerr << "finished all versions of way " << current_way_id << ", checking for extra nodes" << std::endl;
-        for(int i = 0, l = info->extracts.size(); i<l; i++) {
-            SoftcutExtractInfo *extract = info->extracts[i];
-            if(extract->way_tracker.get(current_way_id)) {
-                if(debug) std::cerr << "way had a node inside extract [" << i << "], recording extra nodes" << std::endl;
-                for(current_way_nodes_it it = current_way_nodes.begin(), end = current_way_nodes.end(); it != end; it++) {
-                    extract->extra_node_tracker.set(*it);
-                    if(debug) std::cerr << "  " << *it;
+        if (debug) std::cerr << "finished all versions of way " << current_way_id << ", checking for extra nodes\n";
+        for (const auto& extract : info->extracts) {
+            if (extract->way_tracker.get(current_way_id)) {
+                if (debug) std::cerr << "way had a node inside extract, recording extra nodes\n";
+                for (const auto id : current_way_nodes) {
+                    extract->extra_node_tracker.set(id);
+                    if (debug) std::cerr << "  " << id;
                 }
-                if(debug) std::cerr << std::endl;
+                if (debug) std::cerr << "\n";
             }
         }
     }
 
 public:
     SoftcutPassOne(SoftcutInfo *info) : Cut<SoftcutInfo>(info), current_way_id(0), current_way_nodes() {
-        std::cerr << "softcut first-pass init" << std::endl;
-        for(int i = 0, l = info->extracts.size(); i<l; i++) {
-            std::cerr << "\textract[" << i << "] " << info->extracts[i]->name << std::endl;
+        std::cerr << "softcut first-pass init\n";
+        for (const auto& extract : info->extracts) {
+            std::cerr << "\textract " << extract->name << "\n";
         }
 
-        if(debug) {
-            std::cerr << std::endl << std::endl << "===== NODES =====" << std::endl << std::endl;
+        if (debug) {
+            std::cerr << "\n\n===== NODES =====\n\n";
         }
     }
 
@@ -129,24 +126,16 @@ public:
     //     - if the current node-version is inside the bbox
     //       - record its id in the bboxes node-tracker
     void node(const osmium::Node& node) {
-        if(debug) {
-            std::cerr << "softcut node " << node.id() << " v" << node.version() << std::endl;
+        if (debug) {
+            std::cerr << "softcut node " << node.id() << " v" << node.version() << "\n";
         }
 
-        for(int i = 0, l = info->extracts.size(); i<l; i++) {
-            SoftcutExtractInfo *extract = info->extracts[i];
-            if(extract->contains(node)) {
-                if(debug) std::cerr << "node is in extract [" << i << "], recording in node_tracker" << std::endl;
+        for (const auto& extract : info->extracts) {
+            if (extract->contains(node)) {
+                if (debug) std::cerr << "node is in extract, recording in node_tracker\n";
 
                 extract->node_tracker.set(node.id());
             }
-        }
-    }
-
-    void after_nodes() {
-        if(debug) {
-            std::cerr << "after nodes" << std::endl <<
-                std::endl << std::endl << "===== WAYS =====" << std::endl << std::endl;
         }
     }
 
@@ -172,26 +161,24 @@ public:
 
     void way(const osmium::Way& way) {
         // detect a new way
-        if(current_way_id != 0 && current_way_id != way.id()) {
+        if (current_way_id != 0 && current_way_id != way.id()) {
             write_way_extra_nodes();
             current_way_nodes.clear();
         }
         current_way_id = way.id();
 
-        if(debug) {
-            std::cerr << "softcut way " << way.id() << " v" << way.version() << std::endl;
+        if (debug) {
+            std::cerr << "softcut way " << way.id() << " v" << way.version() << "\n";
         }
 
         for (const auto& node_ref : way.nodes()) {
             current_way_nodes.insert(node_ref.ref());
         }
 
-        for(int i = 0, l = info->extracts.size(); i<l; i++) {
-            SoftcutExtractInfo *extract = info->extracts[i];
-
+        for (const auto& extract : info->extracts) {
             for (const auto& node_ref : way.nodes()) {
-                if(extract->node_tracker.get(node_ref.ref())) {
-                    if(debug) std::cerr << "way has a node (" << node_ref.ref() << ") inside extract [" << i << "], recording in way_tracker" << std::endl;
+                if (extract->node_tracker.get(node_ref.ref())) {
+                    if (debug) std::cerr << "way has a node (" << node_ref.ref() << ") inside extract, recording in way_tracker\n";
 
                     extract->way_tracker.set(way.id());
                     break;
@@ -202,9 +189,8 @@ public:
 
     void after_ways() {
         write_way_extra_nodes();
-        if(debug) {
-            std::cerr << "after ways" << std::endl <<
-                std::endl << std::endl << "===== RELATIONS =====" << std::endl << std::endl;
+        if (debug) {
+            std::cerr << "after ways" << "\n\n===== RELATIONS =====\n\n";
         }
     }
 
@@ -214,35 +200,34 @@ public:
     //       - if the relation-member is recorded in the bboxes node- or way-tracker
     //         - record its id in the bboxes relation-tracker
     void relation(const osmium::Relation& relation) {
-        if(debug) {
-            std::cerr << "softcut relation " << relation.id() << " v" << relation.version() << std::endl;
+        if (debug) {
+            std::cerr << "softcut relation " << relation.id() << " v" << relation.version() << "\n";
         }
 
-        for(int i = 0, l = info->extracts.size(); i<l; i++) {
+        for (const auto& extract : info->extracts) {
             bool hit = false;
-            SoftcutExtractInfo *extract = info->extracts[i];
 
             for (const auto& member : relation.members()) {
 
-                if( !hit && (
+                if ( !hit && (
                     (member.type() == osmium::item_type::node && extract->node_tracker.get(member.ref())) ||
                     (member.type() == osmium::item_type::way && extract->way_tracker.get(member.ref())) ||
                     (member.type() == osmium::item_type::relation && extract->relation_tracker.get(member.ref()))
                 )) {
 
-                    if(debug) std::cerr << "relation has a member (" << member.type() << " " << member.ref() << ") inside extract [" << i << "], recording in relation_tracker" << std::endl;
+                    if (debug) std::cerr << "relation has a member (" << member.type() << " " << member.ref() << ") inside extract, recording in relation_tracker\n";
                     hit = true;
 
                     extract->relation_tracker.set(relation.id());
                 }
 
-                if(member.type() == osmium::item_type::relation) {
-                    if(debug) std::cerr << "recording cascading-pair: " << member.ref() << " -> " << relation.id() << std::endl;
+                if (member.type() == osmium::item_type::relation) {
+                    if (debug) std::cerr << "recording cascading-pair: " << member.ref() << " -> " << relation.id() << "\n";
                     info->cascading_relations_tracker.insert(std::make_pair(member.ref(), relation.id()));
                 }
             }
 
-            if(hit) {
+            if (hit) {
                 cascading_relations(extract, relation.id());
             }
         }
@@ -252,14 +237,14 @@ public:
         typedef std::multimap<osmium::object_id_type, osmium::object_id_type>::const_iterator mm_iter;
 
         std::pair<mm_iter, mm_iter> r = info->cascading_relations_tracker.equal_range(id);
-        if(r.first == r.second) {
+        if (r.first == r.second) {
             return;
         }
 
-        for(mm_iter it = r.first; it !=r.second; ++it) {
-            if(debug) std::cerr << "\tcascading: " << it->second << std::endl;
+        for (mm_iter it = r.first; it !=r.second; ++it) {
+            if (debug) std::cerr << "\tcascading: " << it->second << "\n";
 
-            if(extract->relation_tracker.get(it->second))
+            if (extract->relation_tracker.get(it->second))
                 continue;
 
             extract->relation_tracker.set(it->second);
@@ -268,29 +253,17 @@ public:
         }
     }
 
-    void after_relations() {
-        if(debug) {
-            std::cerr << "after relations" << std::endl;
-        }
-    }
-
-    void final() {
-        std::cerr << "softcut first-pass finished" << std::endl;
-    }
 };
-
-
-
 
 
 class SoftcutPassTwo : public Cut<SoftcutInfo> {
 
 public:
     SoftcutPassTwo(SoftcutInfo *info) : Cut<SoftcutInfo>(info) {
-        std::cerr << "softcut second-pass init" << std::endl;
+        std::cerr << "softcut second-pass init\n";
 
-        if(debug) {
-            std::cerr << std::endl << std::endl << "===== NODES =====" << std::endl << std::endl;
+        if (debug) {
+            std::cerr << "\n\n===== NODES =====\n\n";
         }
     }
 
@@ -299,22 +272,13 @@ public:
     //     - if the node-id is recorded in the bboxes node-tracker or in the extra-node-tracker
     //       - send the node to the bboxes writer
     void node(const osmium::Node& node) {
-        if(debug) {
-            std::cerr << "softcut node " << node.id() << " v" << node.version() << std::endl;
+        if (debug) {
+            std::cerr << "softcut node " << node.id() << " v" << node.version() << "\n";
         }
 
-        for(int i = 0, l = info->extracts.size(); i<l; i++) {
-            SoftcutExtractInfo *extract = info->extracts[i];
-
-            if(extract->node_tracker.get(node.id()) || extract->extra_node_tracker.get(node.id()))
+        for (const auto& extract : info->extracts) {
+            if (extract->node_tracker.get(node.id()) || extract->extra_node_tracker.get(node.id()))
                 extract->write(node);
-        }
-    }
-
-    void after_nodes() {
-        if(debug) {
-            std::cerr << "after nodes" << std::endl <<
-                std::endl << std::endl << "===== WAYS =====" << std::endl << std::endl;
         }
     }
 
@@ -323,22 +287,13 @@ public:
     //     - if the way-id is recorded in the bboxes way-tracker
     //       - send the way to the bboxes writer
     void way(const osmium::Way& way) {
-        if(debug) {
-            std::cerr << "softcut way " << way.id() << " v" << way.version() << std::endl;
+        if (debug) {
+            std::cerr << "softcut way " << way.id() << " v" << way.version() << "\n";
         }
 
-        for(int i = 0, l = info->extracts.size(); i<l; i++) {
-            SoftcutExtractInfo *extract = info->extracts[i];
-
-            if(extract->way_tracker.get(way.id()))
+        for (const auto& extract : info->extracts) {
+            if (extract->way_tracker.get(way.id()))
                 extract->write(way);
-        }
-    }
-
-    void after_ways() {
-        if(debug) {
-            std::cerr << "after ways" << std::endl <<
-                std::endl << std::endl << "===== RELATIONS =====" << std::endl << std::endl;
         }
     }
 
@@ -347,27 +302,16 @@ public:
     //     - if the relation-id is recorded in the bboxes relation-tracker
     //       - send the relation to the bboxes writer
     void relation(const osmium::Relation& relation) {
-        if(debug) {
-            std::cerr << "softcut relation " << relation.id() << " v" << relation.version() << std::endl;
+        if (debug) {
+            std::cerr << "softcut relation " << relation.id() << " v" << relation.version() << "\n";
         }
 
-        for(int i = 0, l = info->extracts.size(); i<l; i++) {
-            SoftcutExtractInfo *extract = info->extracts[i];
-
-            if(extract->relation_tracker.get(relation.id()))
+        for (const auto& extract : info->extracts) {
+            if (extract->relation_tracker.get(relation.id()))
                 extract->write(relation);
         }
     }
 
-    void after_relations() {
-        if(debug) {
-            std::cerr << "after relations" << std::endl;
-        }
-    }
-
-    void final() {
-        std::cerr << "softcut second-pass finished" << std::endl;
-    }
 };
 
 #endif // SPLITTER_SOFTCUT_HPP

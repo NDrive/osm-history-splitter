@@ -31,18 +31,17 @@ public:
     ~ExtractInfo() {
         flush();
         writer.close();
-        if(locator) delete locator;
+        if (locator) delete locator;
     }
 
     bool contains(const osmium::Node& node) {
-        if(mode == BOUNDS) {
+        if (mode == BOUNDS) {
             return
                 (node.location().lon() > bounds.bottom_left().lon()) &&
                 (node.location().lat() > bounds.bottom_left().lat()) &&
                 (node.location().lon() < bounds.top_right().lon()) &&
                 (node.location().lat() < bounds.top_right().lat());
-        }
-        else if(mode == LOCATOR) {
+        } else if (mode == LOCATOR) {
             // BOUNDARY 1
             // EXTERIOR 2
             // INTERIOR 0
@@ -77,8 +76,8 @@ class CutInfo {
 
 protected:
     ~CutInfo() {
-        for(int i=0, l = extracts.size(); i<l; i++) {
-            delete extracts[i];
+        for (auto& extract : extracts) {
+            delete extract;
         }
     }
 
@@ -86,7 +85,7 @@ public:
     std::vector<TExtractInfo*> extracts;
 
     TExtractInfo *addExtract(const std::string& name, double minlon, double minlat, double maxlon, double maxlat) {
-        std::cerr << "opening writer for " << name.c_str() << std::endl;
+        std::cerr << "opening writer for " << name.c_str() << "\n";
         osmium::io::File outfile(name);
 
         const osmium::Location min(minlat, minlon);
@@ -107,7 +106,7 @@ public:
     }
 
     TExtractInfo *addExtract(const std::string& name, geos::geom::Geometry *poly) {
-        std::cerr << "opening writer for " << name.c_str() << std::endl;
+        std::cerr << "opening writer for " << name.c_str() << "\n";
         osmium::io::File outfile(name);
 
         const geos::geom::Envelope *env = poly->getEnvelopeInternal();

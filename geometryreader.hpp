@@ -42,7 +42,7 @@ namespace OsmiumExtension {
     private:
             geos::geom::Geometry *polygonFromWay(const osmium::Way& way) const {
                 if (!way.is_closed()) {
-                    std::cerr << "can't build way polygon geometry of unclosed way, leave it as nullptr" << std::endl;
+                    std::cerr << "can't build way polygon geometry of unclosed way, leave it as nullptr\n";
                     return nullptr;
                 }
                 try {
@@ -56,7 +56,7 @@ namespace OsmiumExtension {
                     geos::geom::LinearRing *ring = geos_factory()->createLinearRing(cs);
                     return static_cast<geos::geom::Geometry *>(geos_factory()->createPolygon(ring, nullptr));
                 } catch (const geos::util::GEOSException& exc) {
-                    std::cerr << "error building way geometry, leave it as nullptr" << std::endl;
+                    std::cerr << "error building way geometry, leave it as nullptr\n";
                     return nullptr;
                 }
             }
@@ -86,13 +86,13 @@ namespace OsmiumExtension {
             handler_cfw->way(way);
 
             if (!way.is_closed()) {
-                std::cerr << "open way " << way.id() << " in osm-input" << std::endl;
+                std::cerr << "open way " << way.id() << " in osm-input\n";
                 return;
             }
 
             geos::geom::Geometry *geom = polygonFromWay(way);
-            if(!geom) {
-                std::cerr << "error creating polygon from way" << std::endl;
+            if (!geom) {
+                std::cerr << "error creating polygon from way\n";
                 return;
             }
             outer.push_back(geom);
@@ -103,7 +103,7 @@ namespace OsmiumExtension {
             try {
                 outerPoly = geos_factory()->createMultiPolygon(outer);
             } catch(geos::util::GEOSException e) {
-                std::cerr << "error creating multipolygon: " << e.what() << std::endl;
+                std::cerr << "error creating multipolygon: " << e.what() << "\n";
                 return nullptr;
             }
             return outerPoly;
@@ -145,8 +145,8 @@ namespace OsmiumExtension {
 
             // file pointer to .poly file
             FILE *fp = fopen(file.c_str(), "r");
-            if(!fp) {
-                std::cerr << "unable to open polygon file " << file << std::endl;
+            if (!fp) {
+                std::cerr << "unable to open polygon file " << file << "\n";
                 return nullptr;
             }
 
@@ -154,8 +154,8 @@ namespace OsmiumExtension {
             char line[polyfile_linelen];
 
             // read title line
-            if(!fgets(line, polyfile_linelen-1, fp)) {
-                std::cerr << "unable to read title line from polygon file " << file << std::endl;
+            if (!fgets(line, polyfile_linelen-1, fp)) {
+                std::cerr << "unable to read title line from polygon file " << file << "\n";
                 return nullptr;
             }
             line[polyfile_linelen-1] = '\0';
@@ -170,18 +170,18 @@ namespace OsmiumExtension {
             double x = 0, y = 0;
 
             // read through the file
-            while(!feof(fp)) {
+            while (!feof(fp)) {
                 // read a line
-                if(!fgets(line, polyfile_linelen-1, fp)) {
-                    std::cerr << "unable to read line from polygon file " << file << std::endl;
+                if (!fgets(line, polyfile_linelen-1, fp)) {
+                    std::cerr << "unable to read line from polygon file " << file << "\n";
                     return nullptr;
                 }
                 line[polyfile_linelen-1] = '\0';
 
                 // when we're currently outside a polygon
-                if(!ispoly) {
+                if (!ispoly) {
                     // if this is an end-line
-                    if(0 == strncmp(line, "END", 3)) {
+                    if (0 == strncmp(line, "END", 3)) {
                         // cancel parsing
                         break;
                     }
@@ -199,15 +199,15 @@ namespace OsmiumExtension {
                 // when we're currently inside a polygon
                 } else {
                     // if this is an end-line
-                    if(0 == strncmp(line, "END", 3)) {
-                        if(!c) {
-                            std::cerr << "empty polygon file" << std::endl;
+                    if (0 == strncmp(line, "END", 3)) {
+                        if (!c) {
+                            std::cerr << "empty polygon file\n";
                             return nullptr;
                         }
 
                         // check if the polygon is closed
-                        if(c->front() != c->back()) {
-                            std::cerr << "auto-closing unclosed polygon" << std::endl;
+                        if (c->front() != c->back()) {
+                            std::cerr << "auto-closing unclosed polygon\n";
                             c->push_back(c->front());
                         }
 
@@ -221,12 +221,12 @@ namespace OsmiumExtension {
                                 nullptr
                             );
                         } catch(geos::util::GEOSException e) {
-                            std::cerr << "error creating polygon: " << e.what() << std::endl;
+                            std::cerr << "error creating polygon: " << e.what() << "\n";
                             return nullptr;
                         }
 
                         // add it to the appropriate polygon vector
-                        if(isinner) {
+                        if (isinner) {
                             inner->push_back(poly);
                         } else {
                             outer->push_back(poly);
@@ -238,7 +238,7 @@ namespace OsmiumExtension {
                     // an ordinary line
                     } else {
                         // try to parse it using sscanf
-                        if(2 != sscanf(line, " %lE %lE", &x, &y)) {
+                        if (2 != sscanf(line, " %lE %lE", &x, &y)) {
                             std::cerr << "unable to parse line from polygon file " << file << ": " << line;
                             return nullptr;
                         }
@@ -250,8 +250,8 @@ namespace OsmiumExtension {
             }
 
             // check that the file ended with END
-            if(0 != strncmp(line, "END", 3)) {
-                std::cerr << "polygon file " << file << " does not end with END token" << std::endl;
+            if (0 != strncmp(line, "END", 3)) {
+                std::cerr << "polygon file " << file << " does not end with END token\n";
                 return nullptr;
             }
 
@@ -271,7 +271,7 @@ namespace OsmiumExtension {
                 geos_factory()->destroyGeometry(outerPoly);
                 geos_factory()->destroyGeometry(innerPoly);
             } catch(geos::util::GEOSException e) {
-                std::cerr << "error creating differential multipolygon: " << e.what() << std::endl;
+                std::cerr << "error creating differential multipolygon: " << e.what() << "\n";
                 return nullptr;
             }
 
@@ -296,8 +296,8 @@ namespace OsmiumExtension {
          */
         static geos::geom::Geometry *fromBBox(const std::string &bbox) {
             double minlon, minlat, maxlon, maxlat;
-            if(4 != sscanf(bbox.c_str(), "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat)) {
-                std::cerr << "invalid BBox string: " << bbox << std::endl;
+            if (4 != sscanf(bbox.c_str(), "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat)) {
+                std::cerr << "invalid BBox string: " << bbox << "\n";
                 return nullptr;
             }
 

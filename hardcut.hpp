@@ -82,30 +82,35 @@ class HardcutInfo : public CutInfo<HardcutExtractInfo> {
 
 class Hardcut : public Cut<HardcutInfo> {
 
+    void copy_tags(osmium::memory::Buffer& buffer, osmium::builder::Builder& builder, const osmium::TagList& tags) {
+        osmium::builder::TagListBuilder tl_builder(buffer, &builder);
+        for (const auto& tag : tags) {
+            tl_builder.add_tag(tag.key(), tag.value());
+        }
+    }
+
 public:
 
     Hardcut(HardcutInfo *info) : Cut<HardcutInfo>(info) {
-        std::cerr << "hardcut init" << std::endl;
-        for(int i = 0, l = info->extracts.size(); i<l; i++) {
-            std::cerr << "\textract[" << i << "] " << info->extracts[i]->name << std::endl;
+        std::cerr << "hardcut init\n";
+
+        for (const auto& extract : info->extracts) {
+            std::cerr << "\textract " << extract->name << "\n";
         }
 
-        if(debug) std::cerr << std::endl << std::endl << "===== NODES =====" << std::endl << std::endl;
+        if (debug) std::cerr << "\n\n===== NODES =====\n\n";
     }
 
     // walk over all node-versions
     void node(const osmium::Node& node) {
-        if(debug) std::cerr << "hardcut node " << node.id() << " v" << node.version() << std::endl;
+        if (debug) std::cerr << "hardcut node " << node.id() << " v" << node.version() << "\n";
 
         // walk over all bboxes
-        for(int i = 0, l = info->extracts.size(); i<l; i++) {
-            // shorthand
-            HardcutExtractInfo *extract = info->extracts[i];
-
+        for (const auto& extract : info->extracts) {
             // if the node-version is in the bbox
-            if(extract->contains(node)) {
+            if (extract->contains(node)) {
                 // write the node to the writer of this bbox
-                if(debug) std::cerr << "node " << node.id() << " v" << node.version() << " is inside bbox[" << i << "], writing it out" << std::endl;
+                if (debug) std::cerr << "node " << node.id() << " v" << node.version() << " is inside bbox, writing it out\n";
                 extract->write(node);
 
                 // record its id in the bboxes node-id-tracker
@@ -116,19 +121,17 @@ public:
 
     // walk over all way-versions
     void way(const osmium::Way& way) {
-        if(debug) std::cerr << "hardcut way " << way.id() << " v" << way.version() << std::endl;
+        if (debug) std::cerr << "hardcut way " << way.id() << " v" << way.version() << "\n";
 
         std::vector<osmium::object_id_type> node_ids;
         node_ids.reserve(way.nodes().size());
 
-        for(int i = 0, l = info->extracts.size(); i<l; i++) {
+        for (const auto& extract : info->extracts) {
             node_ids.clear();
-
-            HardcutExtractInfo *extract = info->extracts[i];
 
             for (const auto& node_ref : way.nodes()) {
                 if (extract->node_tracker.get(node_ref.ref())) {
-                    if(debug) std::cerr << "adding node-id " << node_ref.ref() << " to cutted way " << way.id() << " v" << way.version() << " for bbox[" << i << "]" << std::endl;
+                    if (debug) std::cerr << "adding node-id " << node_ref.ref() << " to cutted way " << way.id() << " v" << way.version() << " for bbox\n";
                     node_ids.push_back(node_ref.ref());
                 }
             }
@@ -139,7 +142,7 @@ public:
                 {
                     osmium::builder::WayBuilder builder(buffer);
 
-                    if(debug) std::cerr << "creating cutted way " << way.id() << " v" << way.version() << " for bbox[" << i << "]" << std::endl;
+                    if (debug) std::cerr << "creating cutted way " << way.id() << " v" << way.version() << " for bbox\n";
 
                     auto& newway = builder.object();
                     newway.set_id(way.id());
@@ -151,12 +154,7 @@ public:
 
                     builder.add_user(way.user());
 
-                    {
-                        osmium::builder::TagListBuilder tl_builder(buffer, &builder);
-                        for (auto it = way.tags().begin(); it != way.tags().end(); ++it) {
-                            tl_builder.add_tag(it->key(), it->value());
-                        }
-                    }
+                    copy_tags(buffer, builder, way.tags());
 
                     {
                         osmium::builder::WayNodeListBuilder wnl_builder{buffer, &builder};
@@ -169,17 +167,17 @@ public:
                 buffer.commit();
 
                 // enable way-writing for this bbox
-                if(debug) std::cerr << "way " << way.id() << " v" << way.version() << " is in bbox[" << i << "]" << std::endl;
+                if (debug) std::cerr << "way " << way.id() << " v" << way.version() << " is in bbox\n";
 
                 // check for short ways
                 const osmium::Way& newway = buffer.get<osmium::Way>(0);
-                if(newway.nodes().size() < 2) {
-                    if(debug) std::cerr << "way " << way.id() << " v" << way.version() << " in bbox[" << i << "] would only be " << newway.nodes().size() << " nodes long, skipping" << std::endl;
+                if (newway.nodes().size() < 2) {
+                    if (debug) std::cerr << "way " << way.id() << " v" << way.version() << " in bbox would only be " << newway.nodes().size() << " nodes long, skipping\n";
                     continue;
                 }
 
                 // write the way to the writer of this bbox
-                if(debug) std::cerr << "way " << way.id() << " v" << way.version() << " is inside bbox[" << i << "], writing it out" << std::endl;
+                if (debug) std::cerr << "way " << way.id() << " v" << way.version() << " is inside bbox, writing it out\n";
                 extract->write(newway);
 
                 // record its id in the bboxes way-id-tracker
@@ -190,18 +188,16 @@ public:
 
     // walk over all relation-versions
     void relation(const osmium::Relation& relation) {
-        if(debug) std::cerr << "hardcut relation " << relation.id() << " v" << relation.version() << std::endl;
+        if (debug) std::cerr << "hardcut relation " << relation.id() << " v" << relation.version() << "\n";
 
         std::vector<const osmium::RelationMember*> members;
         members.reserve(relation.members().size());
 
-        for(int i = 0, l = info->extracts.size(); i<l; i++) {
+        for (const auto& extract : info->extracts) {
             members.clear();
 
-            HardcutExtractInfo *extract = info->extracts[i];
-
             for (const auto& member : relation.members()) {
-                if((member.type() == osmium::item_type::node && extract->node_tracker.get(member.ref())) ||
+                if ((member.type() == osmium::item_type::node && extract->node_tracker.get(member.ref())) ||
                    (member.type() == osmium::item_type::way  && extract->way_tracker.get(member.ref()))) {
                     members.push_back(&member);
                 }
@@ -213,7 +209,7 @@ public:
                 {
                     osmium::builder::RelationBuilder builder(buffer);
 
-                    if(debug) std::cerr << "creating cutted relation " << relation.id() << " v" << relation.version() << " for bbox[" << i << "]" << std::endl;
+                    if (debug) std::cerr << "creating cutted relation " << relation.id() << " v" << relation.version() << " for bbox\n";
 
                     auto& newrelation = builder.object();
                     newrelation.set_id(relation.id());
@@ -225,12 +221,7 @@ public:
 
                     builder.add_user(relation.user());
 
-                    {
-                        osmium::builder::TagListBuilder tl_builder(buffer, &builder);
-                        for (auto it = relation.tags().begin(); it != relation.tags().end(); ++it) {
-                            tl_builder.add_tag(it->key(), it->value());
-                        }
-                    }
+                    copy_tags(buffer, builder, relation.tags());
 
                     {
                         osmium::builder::RelationMemberListBuilder rml_builder{buffer, &builder};
@@ -243,7 +234,7 @@ public:
                 buffer.commit();
 
                 // write the relation to the writer of this bbox
-                if(debug) std::cerr << "relation " << relation.id() << " v" << relation.version() << " is inside bbox[" << i << "], writing it out" << std::endl;
+                if (debug) std::cerr << "relation " << relation.id() << " v" << relation.version() << " is inside bbox, writing it out\n";
 
                 const osmium::Relation& newrelation = buffer.get<osmium::Relation>(0);
                 extract->write(newrelation);
