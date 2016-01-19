@@ -1,5 +1,8 @@
 # OpenStreetMap History Splitter
-This splitter has been developed to split [full-experimental planet dumps](http://wiki.openstreetmap.org/wiki/Planet.osm/full) but it's also possible to split regular [planet dumps](http://wiki.openstreetmap.org/wiki/Planet.osm) with it. It's based on the readers and writers of the [Jochen Topfs](https://github.com/joto) great osmium framework.
+
+This splitter has been developed to split [full-experimental planet dumps](http://wiki.openstreetmap.org/wiki/Planet.osm/full) but it's also possible to split regular [planet dumps](http://wiki.openstreetmap.org/wiki/Planet.osm) with it.
+
+This is a new version of the tool based on [libosmium](http://osmcode/libosmium).
 
 This is the tool used to create the [hosted extracts](http://osm.personalwerk.de/full-history-extracts/).
 
@@ -33,26 +36,20 @@ In order to compile the splitter, you'll first need the [osmium framework](https
 *   Expat (for parsing XML files)
     http://expat.sourceforge.net/
     Debian/Ubuntu: libexpat1-dev
-*   libxml (for writing XML files)
-    http://xmlsoft.org/
-    Debian/Ubuntu:libxml2-dev
 *   GEOS (for polygon checks)
     http://trac.osgeo.org/geos/
     Debian/Ubuntu: libgeos-dev libgeos++-dev
-*   Google sparsehash
-    http://code.google.com/p/google-sparsehash/
-    Debian/Ubuntu: libsparsehash-dev
-*   Google protocol buffers (for PBF support)
-    http://code.google.com/p/protobuf/ (at least Version 2.3.0 needed)
-    Debian/Ubuntu: libprotobuf-dev protobuf-compiler
-    Also see http://wiki.openstreetmap.org/wiki/PBF_Format
-*   OSMPBF (for PBF support)
-    https://github.com/scrosby/OSM-binary
-    Debian/Ubuntu: libosmpbf-dev
+*   CMake
 
-Osmium needs to be present on your system. I recommend to *git clone* osmium directly from [the authors repository](https://github.com/joto/osmium). If you *make install*-ed osmium then osm-history-splitter will locate the osmium headers. You'll also want the pbf support as .pbf-files can be written between 7 and 20 times faster then .xml.bz2-files. For this you'll need a [version of OSM-binary](https://github.com/scrosby/OSM-binary) that supports storing history information.
+Libosmium needs to be present on your system. I recommend to *git clone* osmium directly from [the repository](https://github.com/osmcode/libosmium). If you clone it in the same directory you cloned this repository in, the build scripts will find it.
 
-When you have all prequisites in place, just run *make* to build the splitter.
+To build:
+
+    mkdir build
+    cd build
+    cmake ..
+    make
+
 
 ## Run it
 After building the splitter you'll have a single binary: *osm-history-splitter*. The binary takes two parameters and a few options. The splitter is called like that:
@@ -87,7 +84,5 @@ The POLY files are in Osmosis' *.poly file format. A huge set of .poly files can
 If you are planning to do a huge number of extracts (something like the [Geofabrik](http://download.geofabrik.de/) does), the split-all-clipbounds.py may be your friend. It scans through the clipbounds directory looking for .poly files (.osm files possible), automatically generates config-files and runs the splitter. It does obey the nesting-rules (ie europe/germany.osm.pbf is generated from europe.osm.pbf) and also ensures the files are created in the correct order.
 
 ## Contact
-If you have any questions just ask at osm@mazdermind.de or via the Github messaging system.
-
-Peter
+If you have any questions open an issue on Github.
 
