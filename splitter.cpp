@@ -14,6 +14,7 @@
 #include <geos/algorithm/locate/IndexedPointInAreaLocator.h>
 
 #include "softcut.hpp"
+#include "softercut.hpp"
 #include "hardcut.hpp"
 
 template <typename TExtractInfo>
@@ -103,18 +104,19 @@ bool readConfig(const std::string& conffile, CutInfo<TExtractInfo> &info) {
 }
 
 int main(int argc, char *argv[]) {
-    bool softcut = true;
+    int cut_algoritm = 3;
     bool debug = false;
 
     static struct option long_options[] = {
         {"debug",   no_argument, 0, 'd'},
         {"softcut", no_argument, 0, 's'},
+        {"softercut", no_argument, 0, 'r'},
         {"hardcut", no_argument, 0, 'h'},
         {0, 0, 0, 0}
     };
 
     while (true) {
-        int c = getopt_long(argc, argv, "dsh", long_options, 0);
+        int c = getopt_long(argc, argv, "dsrh", long_options, 0);
         if (c == -1)
             break;
 
@@ -123,10 +125,13 @@ int main(int argc, char *argv[]) {
                 debug = true;
                 break;
             case 's':
-                softcut = true;
+                cut_algoritm = 1;
                 break;
             case 'h':
-                softcut = false;
+                cut_algoritm = 2;
+                break;
+            case 'r':
+                cut_algoritm = 3;
                 break;
         }
     }
@@ -139,14 +144,14 @@ int main(int argc, char *argv[]) {
     std::string filename{argv[optind]};
     std::string conffile{argv[optind+1]};
 
-    if (softcut && filename == "-") {
-        std::cerr << "Can't read from stdin when in softcut\n";
+    if ((cut_algoritm == 1 || cut_algoritm == 3) && filename == "-") {
+        std::cerr << "Can't read from stdin when in softcut or softercut\n";
         return 1;
     }
 
     osmium::io::File infile(filename);
 
-    if (softcut) {
+    if (cut_algoritm == 1) {
         SoftcutInfo info;
         if (!readConfig(conffile, info)) {
             std::cerr << "error reading config\n";
@@ -168,7 +173,8 @@ int main(int argc, char *argv[]) {
             osmium::apply(reader, two);
             reader.close();
         }
-    } else {
+
+    } else if (cut_algoritm == 2) {
         HardcutInfo info;
         if (!readConfig(conffile, info)) {
             std::cerr << "error reading config\n";
@@ -180,6 +186,36 @@ int main(int argc, char *argv[]) {
         osmium::io::Reader reader(infile);
         osmium::apply(reader, cutter);
         reader.close();
+
+    } else if (cut_algoritm == 3) {
+        SoftercutInfo info;
+        if (!readConfig(conffile, info)) {
+            std::cerr << "error reading config\n";
+            return 1;
+        }
+        {
+            SoftercutPassOne one(&info);
+            one.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, one);
+            reader.close();
+        }
+
+        {
+            SoftercutPassTwo two(&info);
+            two.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, two);
+            reader.close();
+        }
+
+        {
+            SoftercutPassThree three(&info);
+            three.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, three);
+            reader.close();
+        }
     }
 
     return 0;
