@@ -272,7 +272,7 @@ public:
 
     SoftcutPassTwo(SoftcutInfo *info) : Cut<SoftcutInfo>(info) {
         if (debug) {
-            std::cerr << "softercut second-pass init\n";
+            std::cerr << "softcut second-pass init\n";
         }
         std::cout << "\n\n=====softcut second-pass=====\n\n";
     }
