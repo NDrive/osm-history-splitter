@@ -125,14 +125,13 @@ class SoftcutPassOne : public Cut<SoftcutInfo> {
 public:
 
     SoftcutPassOne(SoftcutInfo *info) : Cut<SoftcutInfo>(info), current_way_id(0), current_way_nodes() {
-        std::cerr << "softcut first-pass init\n";
+        std::cout << "Start Softcut:\n";
         for (const auto& extract : info->extracts) {
-            std::cerr << "\textract " << extract->name << "\n";
+            std::cout << "\textract " << extract->name << "\n";
         }
 
-        if (debug) {
-            std::cerr << "\n\n===== NODES =====\n\n";
-        }
+        std::cout << "\n\n=====softcut first-pass=====\n\n";
+        
     }
 
     // - walk over all node-versions
@@ -273,8 +272,9 @@ public:
 
     SoftcutPassTwo(SoftcutInfo *info) : Cut<SoftcutInfo>(info) {
         if (debug) {
-            std::cerr << "softcut second-pass init\n";
+            std::cerr << "softercut second-pass init\n";
         }
+        std::cout << "\n\n=====softcut second-pass=====\n\n";
     }
 
     // - walk over all node-versions
