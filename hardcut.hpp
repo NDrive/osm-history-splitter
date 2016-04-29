@@ -92,12 +92,11 @@ class Hardcut : public Cut<HardcutInfo> {
 public:
 
     Hardcut(HardcutInfo *info) : Cut<HardcutInfo>(info) {
-        if (debug) {
-            std::cerr << "hardcut init\n";
-        }
+        std::cout << "Start Hardcut:\n";
+        
 
         for (const auto& extract : info->extracts) {
-            std::cerr << "\textract " << extract->name << "\n";
+            std::cout << "\textract " << extract->name << "\n";
         }
 
         if (debug) {
