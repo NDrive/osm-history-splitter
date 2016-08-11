@@ -91,6 +91,9 @@ public:
 
 
 class SoftercutPassOne : public Cut<SoftercutInfo> {
+    bool frist_node = true;
+    bool frist_way = true;
+    bool frist_relaction = true;
 
 public:
 
@@ -107,6 +110,10 @@ public:
     //     - if the current node-version is inside the bbox
     //       - record its id in the bboxes inside_node_tracker
     void node(const osmium::Node& node) {
+        if (frist_node){
+            std::cout << "\n==node first-pass==\n";
+            frist_node = false;
+        }
         if (debug) {
             std::cerr << "softercut node " << node.id() << " v" << node.version() << "\n";
         }
@@ -128,6 +135,10 @@ public:
     //   - if hit is true and the vector is not empty (it means their are nodes that belong to a way that has at least one node inside the box - complete ways)
     //       - Records the id of node to outside_node_tracker
     void way(const osmium::Way& way) {
+        if (frist_way){
+            std::cout << "\n==way first-pass==\n";
+            frist_way = false;
+        }
         // detect a new way
         bool hit = false;
 
@@ -175,7 +186,10 @@ public:
     //   - if hit is true and the vector is not empty (it means their are nodes or ways that belong to a relation that has at least one node or way inside the box)
     //     - Records the id of node or way to outside_node_tracker or outside_way_tracker
     void relation(const osmium::Relation& relation) {
-	
+        if (frist_relaction){
+            std::cout << "\n==relation first-pass==\n";
+            frist_relaction = false;
+        }
     	bool hit = false;
 
         if (debug) {
@@ -222,7 +236,7 @@ public:
 
 
 class SoftercutPassTwo : public Cut<SoftercutInfo> {
-
+    bool frist_way = true;
 public:
 
     SoftercutPassTwo(SoftercutInfo *info) : Cut<SoftercutInfo>(info) {
@@ -237,6 +251,10 @@ public:
     //     - if the way-id is recorded in the outside_way_tracker and node-id of the way is not in outside_node_tracker
     //       - send the node-id node tracker
     void way(const osmium::Way& way) {
+        if (frist_way){
+            std::cout << "\n==way second-pass==\n";
+            frist_way = false;
+        }
         if (debug) {
             std::cerr << "softercut way " << way.id() << " v" << way.version() << "\n";
         }

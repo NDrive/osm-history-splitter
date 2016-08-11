@@ -15,7 +15,12 @@
 
 #include "softcut.hpp"
 #include "softercut.hpp"
+#include "cut_administrative.hpp"
+#include "cut_highway.hpp"
+#include "cut_all_borders.hpp"
 #include "hardcut.hpp"
+#include "cut_ref.hpp"
+#include "simplecut.hpp"
 
 template <typename TExtractInfo>
 bool readConfig(const std::string& conffile, CutInfo<TExtractInfo> &info) {
@@ -110,13 +115,18 @@ int main(int argc, char *argv[]) {
     static struct option long_options[] = {
         {"debug",   no_argument, 0, 'd'},
         {"softcut", no_argument, 0, 's'},
-        {"softercut", no_argument, 0, 'r'},
         {"hardcut", no_argument, 0, 'h'},
+        {"softercut", no_argument, 0, 'r'},
+        {"cut_administrative", no_argument, 0, 'c'},
+        {"cut_highway", no_argument, 0, 'w'},
+        {"cut_all_borders", no_argument, 0, 'b'},
+        {"cut_ref", no_argument, 0, 'e'},
+        {"simplecut", no_argument, 0, 'p'},
         {0, 0, 0, 0}
     };
 
     while (true) {
-        int c = getopt_long(argc, argv, "dsrh", long_options, 0);
+        int c = getopt_long(argc, argv, "dshrcwbep", long_options, 0);
         if (c == -1)
             break;
 
@@ -133,6 +143,22 @@ int main(int argc, char *argv[]) {
             case 'r':
                 cut_algoritm = 3;
                 break;
+	        case 'c':
+                cut_algoritm = 4;
+                break;
+            case 'w':
+                cut_algoritm = 5;
+                break;
+            case 'b':
+                cut_algoritm = 6;
+                break;
+            case 'e':
+                cut_algoritm = 7;
+                break;
+            case 'p':
+                cut_algoritm = 8;
+                break;
+
         }
     }
 
@@ -144,8 +170,8 @@ int main(int argc, char *argv[]) {
     std::string filename{argv[optind]};
     std::string conffile{argv[optind+1]};
 
-    if ((cut_algoritm == 1 || cut_algoritm == 3) && filename == "-") {
-        std::cerr << "Can't read from stdin when in softcut or softercut\n";
+    if ((cut_algoritm == 1 || cut_algoritm == 3 || cut_algoritm == 4 || cut_algoritm == 5 || cut_algoritm == 6 || cut_algoritm == 7 || cut_algoritm == 8) && filename == "-") {
+        std::cerr << "Can't read from stdin when in softcut, softercut, cut_administrative, cut_highway, cut_all_borders, simplecut or cut_ref\n";
         return 1;
     }
 
@@ -216,7 +242,146 @@ int main(int argc, char *argv[]) {
             osmium::apply(reader, three);
             reader.close();
         }
+    }else if (cut_algoritm == 4) {
+        Cut_administrativeInfo info;
+        if (!readConfig(conffile, info)) {
+            std::cerr << "error reading config\n";
+            return 1;
+        }
+        {
+            Cut_administrativePassOne one(&info);
+            one.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, one);
+            reader.close();
+        }
+
+        {
+            Cut_administrativePassTwo two(&info);
+            two.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, two);
+            reader.close();
+        }
+        {
+            Cut_administrativePassThree three(&info);
+            three.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, three);
+            reader.close();
+        }
     }
+    else if (cut_algoritm == 5) {
+        Cut_highwayInfo info;
+        if (!readConfig(conffile, info)) {
+            std::cerr << "error reading config\n";
+            return 1;
+        }
+        {
+            Cut_highwayPassOne one(&info);
+            one.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, one);
+            reader.close();
+        }
+
+        {
+            Cut_highwayPassTwo two(&info);
+            two.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, two);
+            reader.close();
+        }
+        {
+            Cut_highwayPassThree three(&info);
+            three.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, three);
+            reader.close();
+        }
+    }
+    else if (cut_algoritm == 6) {
+        Cut_all_bordersInfo info;
+        if (!readConfig(conffile, info)) {
+            std::cerr << "error reading config\n";
+            return 1;
+        }
+        {
+            Cut_all_bordersPassOne one(&info);
+            one.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, one);
+            reader.close();
+        }
+
+        {
+            Cut_all_bordersPassTwo two(&info);
+            two.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, two);
+            reader.close();
+        }
+        {
+            Cut_all_bordersPassThree three(&info);
+            three.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, three);
+            reader.close();
+        }
+    }
+    else if (cut_algoritm == 7) {
+        Cut_refInfo info;
+        if (!readConfig(conffile, info)) {
+            std::cerr << "error reading config\n";
+            return 1;
+        }
+        {
+            Cut_refPassOne one(&info);
+            one.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, one);
+            reader.close();
+        }
+
+        {
+            Cut_refPassTwo two(&info);
+            two.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, two);
+            reader.close();
+        }
+        {
+            Cut_refPassThree three(&info);
+            three.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, three);
+            reader.close();
+        }
+    }
+    else if (cut_algoritm == 8) {
+        SimplecutInfo info;
+        if (!readConfig(conffile, info)) {
+            std::cerr << "error reading config\n";
+            return 1;
+        }
+
+        {
+            SimplecutPassOne one(&info);
+            one.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, one);
+            reader.close();
+        }
+
+        {
+            SimplecutPassTwo two(&info);
+            two.debug = debug;
+            osmium::io::Reader reader(infile);
+            osmium::apply(reader, two);
+            reader.close();
+        }
+    }
+
 
     return 0;
 }
