@@ -1,5 +1,5 @@
-#ifndef SPLITTER_SOFTERCUT_HPP
-#define SPLITTER_SOFTERCUT_HPP
+#ifndef SPLITTER_SUPERSOFTERCUT_HPP
+#define SPLITTER_SUPERSOFTERCUT_HPP
 
 #include "cut.hpp"
 #include "growing_bitset.hpp"
@@ -8,7 +8,7 @@
 #include <typeinfo>
 /*
 
-Softercut Algorithm
+SuperSoftercut Algorithm
  - walk over all node-versions
    - walk over all bboxes
      - if the current node-version is inside the bbox
@@ -65,7 +65,7 @@ disadvantages
 */
 
 
-class SoftercutExtractInfo : public ExtractInfo {
+class SuperSoftercutExtractInfo : public ExtractInfo {
 
 public:
 						
@@ -78,31 +78,30 @@ public:
     growing_bitset relation_tracker;	//relations    
 
 
-    SoftercutExtractInfo(const std::string& name, const osmium::io::File& file, const osmium::io::Header& header) :
+    SuperSoftercutExtractInfo(const std::string& name, const osmium::io::File& file, const osmium::io::Header& header) :
         ExtractInfo(name, file, header) {}
 };
 
-class SoftercutInfo : public CutInfo<SoftercutExtractInfo> {
+class SuperSoftercutInfo : public CutInfo<SuperSoftercutExtractInfo> {
 
-public: 
+public:
     std::multimap<osmium::object_id_type, osmium::object_id_type> cascading_relations_tracker;
-
 };
 
 
-class SoftercutPassOne : public Cut<SoftercutInfo> {
+class SuperSoftercutPassOne : public Cut<SuperSoftercutInfo> {
     bool frist_node = true;
     bool frist_way = true;
     bool frist_relaction = true;
 
 public:
 
-    SoftercutPassOne(SoftercutInfo *info) : Cut<SoftercutInfo>(info) {
-        std::cout << "Start Softercut:\n";
+    SuperSoftercutPassOne(SuperSoftercutInfo *info) : Cut<SuperSoftercutInfo>(info) {
+        std::cout << "Start SuperSoftercut:\n";
         for (const auto& extract : info->extracts) {
             std::cout << "\textract " << extract->name << "\n";
         }
-        std::cout << "\n\n===softercut first-pass===\n\n";
+        std::cout << "\n\n===supersoftercut first-pass===\n\n";
     }
 
     // - walk over all node-versions
@@ -115,7 +114,7 @@ public:
             frist_node = false;
         }
         if (debug) {
-            std::cerr << "softercut node " << node.id() << " v" << node.version() << "\n";
+            std::cerr << "supersoftercut node " << node.id() << " v" << node.version() << "\n";
         }
         for (const auto& extract : info->extracts) {
             if (extract->contains(node)) {
@@ -144,7 +143,7 @@ public:
 
 
         if (debug) {
-            std::cerr << "softercut way " << way.id() << " v" << way.version() << "\n";
+            std::cerr << "supersoftercut way " << way.id() << " v" << way.version() << "\n";
         }
 
         std::set<osmium::object_id_type> way_nodes;
@@ -193,7 +192,7 @@ public:
     	bool hit = false;
 
         if (debug) {
-            std::cerr << "softercut relation " << relation.id() << " v" << relation.version() << "\n";
+            std::cerr << "supersoftercut relation " << relation.id() << " v" << relation.version() << "\n";
         }
     	
         std::vector<const osmium::RelationMember*> members;
@@ -201,49 +200,46 @@ public:
     	
     	for (const auto& extract : info->extracts) {
     		members.clear();
-                hit = false;
+            hit = false;
     		for (const auto& member : relation.members()) {
-    			
-            		if ((member.type() == osmium::item_type::node && extract->inside_node_tracker.get(member.ref())) ||
-                       	(member.type() == osmium::item_type::way  && extract->inside_way_tracker.get(member.ref()))) {
-                       	 	hit = true;
-    			}
-    			else if ((member.type() == osmium::item_type::node && !extract->inside_node_tracker.get(member.ref())) ||
-                       	(member.type() == osmium::item_type::way  && !extract->inside_way_tracker.get(member.ref()))) {
-    				      members.push_back(&member); 
-                    }
-    		}
-                if (hit){
-                     if(!extract->relation_tracker.get(relation.id())){
-    			extract->relation_tracker.set(relation.id());
-                     }
-    		     //Add only the nodes and ways that were not yet in the respective trackers if hit is true
-    		     if (!members.empty()){
-    			for (auto memptr : members) {
-    				if (memptr->type() == osmium::item_type::node && !extract->outside_node_tracker.get(memptr->ref())){
+                if ((member.type() == osmium::item_type::node && extract->inside_node_tracker.get(member.ref())) || (member.type() == osmium::item_type::way  && extract->inside_way_tracker.get(member.ref()))) {
+                    hit = true;
+                }
+    			else if ((member.type() == osmium::item_type::node && !extract->inside_node_tracker.get(member.ref())) || (member.type() == osmium::item_type::way  && !extract->inside_way_tracker.get(member.ref()))) {
+    				members.push_back(&member); 
+                }
+            }
+            if (hit){
+                if(!extract->relation_tracker.get(relation.id())){
+                    extract->relation_tracker.set(relation.id());
+                }
+                //Add only the nodes and ways that were not yet in the respective trackers if hit is true
+                if (!members.empty()){
+                    for (auto memptr : members) {
+                        if (memptr->type() == osmium::item_type::node && !extract->outside_node_tracker.get(memptr->ref())){
     						extract->outside_node_tracker.set(memptr->ref());
-    	 			}
-    				
-    				else if (memptr->type() == osmium::item_type::way && !extract->outside_way_tracker.get(memptr->ref())){
+                        }
+                        else if (memptr->type() == osmium::item_type::way && !extract->outside_way_tracker.get(memptr->ref())){
     						extract->outside_way_tracker.set(memptr->ref());
-    				}
-    			}
-              	    }
-               }
+                        }
+                    }
+                }
+            }
         }
     }
-}; // class SoftercutPassOne
+}; // class SuperSoftercutPassOne
 
 
-class SoftercutPassTwo : public Cut<SoftercutInfo> {
+class SuperSoftercutPassTwo : public Cut<SuperSoftercutInfo> {
     bool frist_way = true;
+    bool frist_relaction = true;
 public:
 
-    SoftercutPassTwo(SoftercutInfo *info) : Cut<SoftercutInfo>(info) {
+    SuperSoftercutPassTwo(SuperSoftercutInfo *info) : Cut<SuperSoftercutInfo>(info) {
         if (debug) {
-            std::cerr << "softercut second-pass init\n";
+            std::cerr << "supersoftercut second-pass init\n";
         }
-        std::cout << "\n\n===softercut second-pass===\n\n";
+        std::cout << "\n\n===supersoftercut second-pass===\n\n";
     }
 
     // - walk over all way-versions
@@ -256,7 +252,7 @@ public:
             frist_way = false;
         }
         if (debug) {
-            std::cerr << "softercut way " << way.id() << " v" << way.version() << "\n";
+            std::cerr << "supersoftercut way " << way.id() << " v" << way.version() << "\n";
         }
         for (const auto& extract : info->extracts) {
             if (extract->outside_way_tracker.get(way.id())) {
@@ -268,17 +264,72 @@ public:
            }
     	}
     }
-}; // class SoftercutPassTwo
 
-class SoftercutPassThree : public Cut<SoftercutInfo> {
+
+    // - walk over all way-versions
+    //   - walk over all bboxes
+    //     - if the way-id is recorded in the outside_way_tracker and node-id of the way is not in outside_node_tracker
+    //       - send the node-id node tracker
+    void relation(const osmium::Relation& relation) {
+        if (frist_relaction){
+            std::cout << "\n==relation second-pass==\n";
+            frist_relaction = false;
+        }
+        bool hit = false;
+
+        if (debug) {
+            std::cerr << "supersoftercut relation " << relation.id() << " v" << relation.version() << "\n";
+        }
+        
+        for (const auto& extract : info->extracts) {
+            hit = false;
+            for (const auto& member : relation.members()) {
+                if (member.type() == osmium::item_type::relation) {
+                    info->cascading_relations_tracker.insert(std::make_pair(member.ref(), relation.id()));
+                    if (extract->relation_tracker.get(member.ref())){
+                        hit = true;
+                        break;
+                    }
+                }
+            }
+            if (hit){
+                if(!extract->relation_tracker.get(relation.id())){
+                    extract->relation_tracker.set(relation.id());
+                }
+                cascading_relations(extract, relation.id());
+            }
+        }
+    }
+
+    void cascading_relations(SuperSoftercutExtractInfo *extract, osmium::object_id_type id) {
+        auto r = info->cascading_relations_tracker.equal_range(id);
+
+        for (auto it = r.first; it != r.second; ++it) {
+            if (debug) std::cerr << "\tcascading: " << it->second << "\n";
+
+            if (extract->relation_tracker.get(it->second)) {
+                continue;
+            }
+
+            extract->relation_tracker.set(it->second);
+
+            cascading_relations(extract, it->second);
+        }
+    }
+
+
+
+}; // class SuperSoftercutPassTwo
+
+class SuperSoftercutPassThree : public Cut<SuperSoftercutInfo> {
 
 public:
 
-     SoftercutPassThree(SoftercutInfo *info) : Cut<SoftercutInfo>(info) {
+     SuperSoftercutPassThree(SuperSoftercutInfo *info) : Cut<SuperSoftercutInfo>(info) {
         if (debug) {
-            std::cerr << "softercut third-pass init\n";
+            std::cerr << "supersoftercut third-pass init\n";
         }
-        std::cout << "\n\n===softercut third-pass===\n\n";
+        std::cout << "\n\n===supersoftercut third-pass===\n\n";
     }
 
     // - walk over all node-versions
@@ -287,7 +338,7 @@ public:
     //       - send the node to the bboxes writer
     void node(const osmium::Node& node) {
         if (debug) {
-            std::cerr << "softercut node " << node.id() << " v" << node.version() << "\n";
+            std::cerr << "supersoftercut node " << node.id() << " v" << node.version() << "\n";
         }
         for (const auto& extract : info->extracts) {
             if (extract->inside_node_tracker.get(node.id())){
@@ -305,7 +356,7 @@ public:
     //       - send the way to the bboxes writer
     void way(const osmium::Way& way) {
         if (debug) {
-            std::cerr << "softercut way " << way.id() << " v" << way.version() << "\n";
+            std::cerr << "supersoftercut way " << way.id() << " v" << way.version() << "\n";
         }
         for (const auto& extract : info->extracts) {
 	    if (extract->inside_way_tracker.get(way.id())){
@@ -323,7 +374,7 @@ public:
     //       - send the relation to the bboxes writer
     void relation(const osmium::Relation& relation) {
         if (debug) {
-            std::cerr << "softercut relation " << relation.id() << " v" << relation.version() << "\n";
+            std::cerr << "supersoftercut relation " << relation.id() << " v" << relation.version() << "\n";
         }
 
         for (const auto& extract : info->extracts) {
@@ -332,7 +383,7 @@ public:
             }
         }
     }
-}; // class SoftercutPassThree
+}; // class SuperSoftercutPassThree
 
-#endif // SPLITTER_SOFTERCUT_HPP
+#endif // SPLITTER_SUPERSOFTERCUT_HPP
 

@@ -111,7 +111,7 @@ public:
                 hit = true;
             else if (strcmp(tag.key(), "boundary") == 0 && strcmp(tag.value(), "territorial") == 0)
                 hit = true;
-            else if (relation.id() == 2186646 || relation.id() == 2559126)
+            else if (relation.id() == 2186646 || relation.id() == 2559126 || relation.id() == 192797 || relation.id() == 3335661)
                 hit = true;
         }
 

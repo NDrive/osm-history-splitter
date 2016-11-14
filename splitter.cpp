@@ -16,10 +16,10 @@
 #include "softcut.hpp"
 #include "softercut.hpp"
 #include "cut_administrative.hpp"
-#include "cut_highway.hpp"
+#include "cut_water.hpp"
 #include "cut_all_borders.hpp"
 #include "hardcut.hpp"
-#include "cut_ref.hpp"
+#include "supersoftercut.hpp"
 #include "simplecut.hpp"
 
 template <typename TExtractInfo>
@@ -118,9 +118,9 @@ int main(int argc, char *argv[]) {
         {"hardcut", no_argument, 0, 'h'},
         {"softercut", no_argument, 0, 'r'},
         {"cut_administrative", no_argument, 0, 'c'},
-        {"cut_highway", no_argument, 0, 'w'},
+        {"cut_water", no_argument, 0, 'w'},
         {"cut_all_borders", no_argument, 0, 'b'},
-        {"cut_ref", no_argument, 0, 'e'},
+        {"supersoftercut", no_argument, 0, 'e'},
         {"simplecut", no_argument, 0, 'p'},
         {0, 0, 0, 0}
     };
@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
             case 'r':
                 cut_algoritm = 3;
                 break;
-	        case 'c':
+	    case 'c':
                 cut_algoritm = 4;
                 break;
             case 'w':
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
     std::string conffile{argv[optind+1]};
 
     if ((cut_algoritm == 1 || cut_algoritm == 3 || cut_algoritm == 4 || cut_algoritm == 5 || cut_algoritm == 6 || cut_algoritm == 7 || cut_algoritm == 8) && filename == "-") {
-        std::cerr << "Can't read from stdin when in softcut, softercut, cut_administrative, cut_highway, cut_all_borders, simplecut or cut_ref\n";
+        std::cerr << "Can't read from stdin when in softcut, softercut, cut_administrative, cut_water, cut_all_borders, simplecut or supersoftercut\n";
         return 1;
     }
 
@@ -272,13 +272,13 @@ int main(int argc, char *argv[]) {
         }
     }
     else if (cut_algoritm == 5) {
-        Cut_highwayInfo info;
+        Cut_waterInfo info;
         if (!readConfig(conffile, info)) {
             std::cerr << "error reading config\n";
             return 1;
         }
         {
-            Cut_highwayPassOne one(&info);
+            Cut_waterPassOne one(&info);
             one.debug = debug;
             osmium::io::Reader reader(infile);
             osmium::apply(reader, one);
@@ -286,17 +286,10 @@ int main(int argc, char *argv[]) {
         }
 
         {
-            Cut_highwayPassTwo two(&info);
+            Cut_waterPassTwo two(&info);
             two.debug = debug;
             osmium::io::Reader reader(infile);
             osmium::apply(reader, two);
-            reader.close();
-        }
-        {
-            Cut_highwayPassThree three(&info);
-            three.debug = debug;
-            osmium::io::Reader reader(infile);
-            osmium::apply(reader, three);
             reader.close();
         }
     }
@@ -330,13 +323,13 @@ int main(int argc, char *argv[]) {
         }
     }
     else if (cut_algoritm == 7) {
-        Cut_refInfo info;
+        SuperSoftercutInfo info;
         if (!readConfig(conffile, info)) {
             std::cerr << "error reading config\n";
             return 1;
         }
         {
-            Cut_refPassOne one(&info);
+            SuperSoftercutPassOne one(&info);
             one.debug = debug;
             osmium::io::Reader reader(infile);
             osmium::apply(reader, one);
@@ -344,14 +337,14 @@ int main(int argc, char *argv[]) {
         }
 
         {
-            Cut_refPassTwo two(&info);
+            SuperSoftercutPassTwo two(&info);
             two.debug = debug;
             osmium::io::Reader reader(infile);
             osmium::apply(reader, two);
             reader.close();
         }
         {
-            Cut_refPassThree three(&info);
+            SuperSoftercutPassThree three(&info);
             three.debug = debug;
             osmium::io::Reader reader(infile);
             osmium::apply(reader, three);

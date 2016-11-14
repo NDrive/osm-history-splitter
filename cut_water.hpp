@@ -1,5 +1,5 @@
-#ifndef SPLITTER_CUT_HIGHWAY_HPP
-#define SPLITTER_CUT_HIGHWAY_HPP
+#ifndef SPLITTER_CUT_WATER_HPP
+#define SPLITTER_CUT_WATER_HPP
 
 #include "cut.hpp"
 #include "growing_bitset.hpp"
@@ -8,7 +8,7 @@
 #include <typeinfo>
 /*
 
-Cut_highway Algorithm
+Cut_water Algorithm
 
  - walk over all way-versions
    - walk over all way-nodes
@@ -54,22 +54,22 @@ disadvantages
 */
 
 
-class Cut_highwayExtractInfo : public ExtractInfo {
+class Cut_waterExtractInfo : public ExtractInfo {
 
 public:
-						
-    growing_bitset node_tracker;	//nodes 
+                        
+    growing_bitset node_tracker;    //nodes 
 
-    growing_bitset way_tracker;	//ways 	
+    growing_bitset way_tracker; //ways  
 
-    growing_bitset relation_tracker;	//relations    
+    growing_bitset relation_tracker;    //relations    
 
 
-    Cut_highwayExtractInfo(const std::string& name, const osmium::io::File& file, const osmium::io::Header& header) :
+    Cut_waterExtractInfo(const std::string& name, const osmium::io::File& file, const osmium::io::Header& header) :
         ExtractInfo(name, file, header) {}
 };
 
-class Cut_highwayInfo : public CutInfo<Cut_highwayExtractInfo> {
+class Cut_waterInfo : public CutInfo<Cut_waterExtractInfo> {
 
 public: 
     std::multimap<osmium::object_id_type, osmium::object_id_type> cascading_relations_tracker;
@@ -77,16 +77,16 @@ public:
 };
 
 
-class Cut_highwayPassOne : public Cut<Cut_highwayInfo> {
+class Cut_waterPassOne : public Cut<Cut_waterInfo> {
 
 public:
 
-    Cut_highwayPassOne(Cut_highwayInfo *info) : Cut<Cut_highwayInfo>(info) {
-        std::cout << "Start Cut_highway:\n";
+    Cut_waterPassOne(Cut_waterInfo *info) : Cut<Cut_waterInfo>(info) {
+        std::cout << "Start Cut_water:\n";
         for (const auto& extract : info->extracts) {
             std::cout << "\textract " << extract->name << "\n";
         }
-        std::cout << "\n\n===cut_highway first-pass===\n\n";
+        std::cout << "\n\n===cut_water first-pass===\n\n";
     }
     // - walk over all relations-versions
     //   - walk over all relations-nodes
@@ -99,111 +99,49 @@ public:
         bool hit = false;
 
         if (debug) {
-            std::cerr << "cut_highway way " << way.id() << " v" << way.version() << "\n";
+            std::cerr << "cut_water way " << way.id() << " v" << way.version() << "\n";
         }
         
         std::vector<const osmium::TagList*> tags;
 
         for (auto& tag : way.tags()) {
-            if ((strcmp(tag.key(), "highway") == 0)
+            if ((strcmp(tag.key(), "natural") == 0) && (strcmp(tag.value(), "coastline") == 0))
                 hit = true;
         }   
         for (const auto& extract : info->extracts) {
             if (hit){
                 if(!extract->way_tracker.get(way.id())){
                     extract->way_tracker.set(way.id());
-                }
-            }
-        }
-    }
-    // - walk over all relations-versions
-    //   - walk over all relations-nodes
-    //     - Adds the nodes and ways that aren't in node-tracker to a vector
-    //     - if node or way is in the box hit becames true
-    //   - if hit is true and the vector is not empty (it means their are nodes or ways that belong to a relation that has at least one node or way inside the box)
-    //     - Records the id of node or way to outside_node_tracker or outside_way_tracker
-    void relation(const osmium::Relation& relation) {
-	
-    	bool hit = false;
-
-        if (debug) {
-            std::cerr << "cut_highway relation " << relation.id() << " v" << relation.version() << "\n";
-        }
-    	
-        std::vector<const osmium::RelationMember*> members;
-        std::vector<const osmium::TagList*> tags;
-
-        for (auto& tag : relation.tags()) {
-            if ((strcmp(tag.key(), "highway") == 0)
-                hit = true;
-        }	
-    	for (const auto& extract : info->extracts) {
-            if (hit){
-                if(!extract->relation_tracker.get(relation.id())){
-                    extract->relation_tracker.set(relation.id());
-                }
-                //Add only the nodes and ways that were not yet in the respective trackers if hit is true
-                for (const auto& member : relation.members()) {
-                    if (member.type() == osmium::item_type::way && !extract->way_tracker.get(member.ref())){
-                            extract->way_tracker.set(member.ref());
-                    } 
-                }
-            }
-        }
-    }
-}; // class Cut_highwayPassOne
-
-
-class Cut_highwayPassTwo : public Cut<Cut_highwayInfo> {
-
-public:
-
-    Cut_highwayPassTwo(Cut_highwayInfo *info) : Cut<Cut_highwayInfo>(info) {
-        if (debug) {
-            std::cerr << "cut_highway second-pass init\n";
-        }
-        std::cout << "\n\n===cut_highway second-pass===\n\n";
-    }
-
-    // - walk over all way-versions
-    //   - walk over all bboxes
-    //     - if the way-id is recorded in the bboxes way-trackers
-    //       - send the way to the bboxes writer
-    void way(const osmium::Way& way) {
-        if (debug) {
-            std::cerr << "cut_highway way " << way.id() << " v" << way.version() << "\n";
-        }
-        for (const auto& extract : info->extracts) {
-            if (extract->way_tracker.get(way.id())){
-                for (const auto& node_ref : way.nodes()) {
-                    if (!extract->node_tracker.get(node_ref.ref())) {
-                        extract->node_tracker.set(node_ref.ref());
+                    for (const auto& node_ref : way.nodes()) {
+                        if (!extract->node_tracker.get(node_ref.ref())) {
+                            extract->node_tracker.set(node_ref.ref());
+                        }
                     }
                 }
             }
         }
     }
-}; // class Cut_highwayPassTwo
+
+}; // class Cut_waterPassOne
 
 
-class Cut_highwayPassThree : public Cut<Cut_highwayInfo> {
+class Cut_waterPassTwo : public Cut<Cut_waterInfo> {
 
 public:
 
-    Cut_highwayPassThree(Cut_highwayInfo *info) : Cut<Cut_highwayInfo>(info) {
+    Cut_waterPassTwo(Cut_waterInfo *info) : Cut<Cut_waterInfo>(info) {
         if (debug) {
-            std::cerr << "cut_highway thrid-pass init\n";
+            std::cerr << "cut_water second-pass init\n";
         }
-        std::cout << "\n\n===cut_highway thrid-pass===\n\n";
+        std::cout << "\n\n===cut_water second-pass===\n\n";
     }
-
     // - walk over all node-versions
     //   - walk over all bboxes
     //     - if the node-id is recorded in the bboxes node-trackers
     //       - send the node to the bboxes writer
     void node(const osmium::Node& node) {
         if (debug) {
-            std::cerr << "cut_highway node " << node.id() << " v" << node.version() << "\n";
+            std::cerr << "cut_water node " << node.id() << " v" << node.version() << "\n";
         }
         for (const auto& extract : info->extracts) {
             if (extract->node_tracker.get(node.id())){
@@ -218,7 +156,7 @@ public:
     //       - send the way to the bboxes writer
     void way(const osmium::Way& way) {
         if (debug) {
-            std::cerr << "cut_highway way " << way.id() << " v" << way.version() << "\n";
+            std::cerr << "cut_water way " << way.id() << " v" << way.version() << "\n";
         }
         for (const auto& extract : info->extracts) {
             if (extract->way_tracker.get(way.id())){
@@ -233,7 +171,7 @@ public:
     //       - send the relation to the bboxes writer
     void relation(const osmium::Relation& relation) {
         if (debug) {
-            std::cerr << "cut_highway relation " << relation.id() << " v" << relation.version() << "\n";
+            std::cerr << "cut_water relation " << relation.id() << " v" << relation.version() << "\n";
         }
 
         for (const auto& extract : info->extracts) {
@@ -242,7 +180,6 @@ public:
             }
         }
     }
-}; // class Cut_highwayPassThree
+}; // class Cut_waterPassTwo
 
-#endif // SPLITTER_CUT_HIGHWAY_HPP
-
+#endif // SPLITTER_CUT_WATER_HPP
