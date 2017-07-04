@@ -129,9 +129,9 @@ public:
         for (const auto& extract : info->extracts) {
             std::cout << "\textract " << extract->name << "\n";
         }
-
-        std::cout << "\n\n=====softcut first-pass=====\n\n";
-        
+        if (debug) {
+            std::cerr << "\n\n=====softcut first-pass=====\n\n";
+        }
     }
 
     // - walk over all node-versions
@@ -272,9 +272,9 @@ public:
 
     SoftcutPassTwo(SoftcutInfo *info) : Cut<SoftcutInfo>(info) {
         if (debug) {
-            std::cerr << "softcut second-pass init\n";
+            std::cerr << "\n\n=====softcut second-pass=====\n\n";
         }
-        std::cout << "\n\n=====softcut second-pass=====\n\n";
+
     }
 
     // - walk over all node-versions
@@ -329,4 +329,3 @@ public:
 }; // class SoftcutPassTwo
 
 #endif // SPLITTER_SOFTCUT_HPP
-

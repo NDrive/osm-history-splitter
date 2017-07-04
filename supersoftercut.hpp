@@ -55,7 +55,7 @@ features:
  - if an object is in the extract, all versions of it are there
  - ways and relations are not changed
  - ways are reference-complete
- - all the ways and nodes of a relation that has at least one node or way inside the box are added  
+ - all the ways and nodes of a relation that has at least one node or way inside the box are added
 
 disadvantages
  - three pass
@@ -68,14 +68,14 @@ disadvantages
 class SuperSoftercutExtractInfo : public ExtractInfo {
 
 public:
-						
-    growing_bitset inside_node_tracker;	//nodes inside the box	
-    growing_bitset outside_node_tracker; //nodes outside the box	
 
-    growing_bitset inside_way_tracker;	//ways inside the box	
-    growing_bitset outside_way_tracker;	//ways outside the box	
+    growing_bitset inside_node_tracker;	//nodes inside the box
+    growing_bitset outside_node_tracker; //nodes outside the box
 
-    growing_bitset relation_tracker;	//relations    
+    growing_bitset inside_way_tracker;	//ways inside the box
+    growing_bitset outside_way_tracker;	//ways outside the box
+
+    growing_bitset relation_tracker;	//relations
 
 
     SuperSoftercutExtractInfo(const std::string& name, const osmium::io::File& file, const osmium::io::Header& header) :
@@ -101,7 +101,9 @@ public:
         for (const auto& extract : info->extracts) {
             std::cout << "\textract " << extract->name << "\n";
         }
-        std::cout << "\n\n===supersoftercut first-pass===\n\n";
+        if (debug) {
+            std::cerr << "\n\n===supersoftercut first-pass===\n\n";
+        }
     }
 
     // - walk over all node-versions
@@ -110,7 +112,9 @@ public:
     //       - record its id in the bboxes inside_node_tracker
     void node(const osmium::Node& node) {
         if (frist_node){
-            std::cout << "\n==node first-pass==\n";
+            if (debug) {
+                std::cerr << "\n==node first-pass==\n";
+            }
             frist_node = false;
         }
         if (debug) {
@@ -118,7 +122,7 @@ public:
         }
         for (const auto& extract : info->extracts) {
             if (extract->contains(node)) {
-                if (debug) 
+                if (debug)
                     std::cerr << "node is in extract, recording in node_tracker\n";
                 if(!extract->inside_node_tracker.get(node.id())){
                     extract->inside_node_tracker.set(node.id());
@@ -135,7 +139,9 @@ public:
     //       - Records the id of node to outside_node_tracker
     void way(const osmium::Way& way) {
         if (frist_way){
-            std::cout << "\n==way first-pass==\n";
+            if (debug) {
+                std::cerr << "\n==way first-pass==\n";
+            }
             frist_way = false;
         }
         // detect a new way
@@ -159,7 +165,7 @@ public:
                     }
                 }
                 else{
-                   way_nodes.insert(node_ref.ref()); 
+                   way_nodes.insert(node_ref.ref());
                 }
             }
             if (hit){
@@ -186,7 +192,9 @@ public:
     //     - Records the id of node or way to outside_node_tracker or outside_way_tracker
     void relation(const osmium::Relation& relation) {
         if (frist_relaction){
-            std::cout << "\n==relation first-pass==\n";
+            if (debug) {
+                std::cerr << "\n==relation first-pass==\n";
+            }
             frist_relaction = false;
         }
     	bool hit = false;
@@ -194,10 +202,10 @@ public:
         if (debug) {
             std::cerr << "supersoftercut relation " << relation.id() << " v" << relation.version() << "\n";
         }
-    	
+
         std::vector<const osmium::RelationMember*> members;
         members.reserve(relation.members().size());
-    	
+
     	for (const auto& extract : info->extracts) {
     		members.clear();
             hit = false;
@@ -206,7 +214,7 @@ public:
                     hit = true;
                 }
     			else if ((member.type() == osmium::item_type::node && !extract->inside_node_tracker.get(member.ref())) || (member.type() == osmium::item_type::way  && !extract->inside_way_tracker.get(member.ref()))) {
-    				members.push_back(&member); 
+    				members.push_back(&member);
                 }
             }
             if (hit){
@@ -237,9 +245,9 @@ public:
 
     SuperSoftercutPassTwo(SuperSoftercutInfo *info) : Cut<SuperSoftercutInfo>(info) {
         if (debug) {
-            std::cerr << "supersoftercut second-pass init\n";
+            std::cerr << "\n\n===supersoftercut second-pass===\n\n";
         }
-        std::cout << "\n\n===supersoftercut second-pass===\n\n";
+
     }
 
     // - walk over all way-versions
@@ -248,7 +256,9 @@ public:
     //       - send the node-id node tracker
     void way(const osmium::Way& way) {
         if (frist_way){
-            std::cout << "\n==way second-pass==\n";
+            if (debug) {
+                std::cerr << "\n==way second-pass==\n";
+            }
             frist_way = false;
         }
         if (debug) {
@@ -259,7 +269,7 @@ public:
                 for (const auto& node_ref : way.nodes()) {
                     if (!extract->outside_node_tracker.get(node_ref.ref())) {
                         extract->outside_node_tracker.set(node_ref.ref());
-                    }            
+                    }
                 }
            }
     	}
@@ -272,7 +282,9 @@ public:
     //       - send the node-id node tracker
     void relation(const osmium::Relation& relation) {
         if (frist_relaction){
-            std::cout << "\n==relation second-pass==\n";
+            if (debug) {
+                std::cerr << "\n==relation second-pass==\n";
+            }
             frist_relaction = false;
         }
         bool hit = false;
@@ -280,7 +292,7 @@ public:
         if (debug) {
             std::cerr << "supersoftercut relation " << relation.id() << " v" << relation.version() << "\n";
         }
-        
+
         for (const auto& extract : info->extracts) {
             hit = false;
             for (const auto& member : relation.members()) {
@@ -327,9 +339,9 @@ public:
 
      SuperSoftercutPassThree(SuperSoftercutInfo *info) : Cut<SuperSoftercutInfo>(info) {
         if (debug) {
-            std::cerr << "supersoftercut third-pass init\n";
+            std::cerr << "\n\n===supersoftercut third-pass===\n\n";
         }
-        std::cout << "\n\n===supersoftercut third-pass===\n\n";
+
     }
 
     // - walk over all node-versions
@@ -346,7 +358,7 @@ public:
             }
             else if (extract->outside_node_tracker.get(node.id())) {
                 extract->write(node);
-            }   
+            }
         }
     }
 
@@ -363,7 +375,7 @@ public:
                 extract->write(way);
             }
             else if (extract->outside_way_tracker.get(way.id())) {
-                extract->write(way);			
+                extract->write(way);
             }
         }
     }
@@ -386,4 +398,3 @@ public:
 }; // class SuperSoftercutPassThree
 
 #endif // SPLITTER_SUPERSOFTERCUT_HPP
-

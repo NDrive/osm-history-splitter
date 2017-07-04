@@ -45,7 +45,7 @@ features:
  - if an object is in the extract, all versions of it are there
  - ways and relations are not changed
  - ways are reference-complete
- - all the ways and nodes of a relation that has at least one node or way inside the box are added  
+ - all the ways and nodes of a relation that has at least one node or way inside the box are added
 
 disadvantages
  - two pass
@@ -57,12 +57,12 @@ disadvantages
 class Cut_all_bordersExtractInfo : public ExtractInfo {
 
 public:
-						
-    growing_bitset node_tracker;	//nodes 
 
-    growing_bitset way_tracker;	//ways 	
+    growing_bitset node_tracker;	//nodes
 
-    growing_bitset relation_tracker;	//relations    
+    growing_bitset way_tracker;	//ways
+
+    growing_bitset relation_tracker;	//relations
 
 
     Cut_all_bordersExtractInfo(const std::string& name, const osmium::io::File& file, const osmium::io::Header& header) :
@@ -71,7 +71,7 @@ public:
 
 class Cut_all_bordersInfo : public CutInfo<Cut_all_bordersExtractInfo> {
 
-public: 
+public:
     std::multimap<osmium::object_id_type, osmium::object_id_type> cascading_relations_tracker;
 
 };
@@ -86,7 +86,9 @@ public:
         for (const auto& extract : info->extracts) {
             std::cout << "\textract " << extract->name << "\n";
         }
-        std::cout << "\n\n===cut_all_borders first-pass===\n\n";
+        if (debug) {
+            std::cerr << "\n\n===cut_all_borders first-pass===\n\n";
+        }
     }
 
     // - walk over all relations-versions
@@ -96,13 +98,13 @@ public:
     //   - if hit is true and the vector is not empty (it means their are nodes or ways that belong to a relation that has at least one node or way inside the box)
     //     - Records the id of node or way to outside_node_tracker or outside_way_tracker
     void relation(const osmium::Relation& relation) {
-	
+
     	bool hit = false;
 
         if (debug) {
             std::cerr << "cut_all_borders relation " << relation.id() << " v" << relation.version() << "\n";
         }
-    	
+
         std::vector<const osmium::RelationMember*> members;
         std::vector<const osmium::TagList*> tags;
 
@@ -124,7 +126,7 @@ public:
                 for (const auto& member : relation.members()) {
                     if (member.type() == osmium::item_type::way && !extract->way_tracker.get(member.ref())){
                             extract->way_tracker.set(member.ref());
-                    } 
+                    }
                 }
             }
         }
@@ -138,9 +140,8 @@ public:
 
     Cut_all_bordersPassTwo(Cut_all_bordersInfo *info) : Cut<Cut_all_bordersInfo>(info) {
         if (debug) {
-            std::cerr << "cut_all_borders second-pass init\n";
+            std::cerr << "\n\n===cut_all_borders second-pass===\n\n";
         }
-        std::cout << "\n\n===cut_all_borders second-pass===\n\n";
     }
 
     // - walk over all way-versions
@@ -170,9 +171,8 @@ public:
 
     Cut_all_bordersPassThree(Cut_all_bordersInfo *info) : Cut<Cut_all_bordersInfo>(info) {
         if (debug) {
-            std::cerr << "cut_all_borders thrid-pass init\n";
+            std::cerr << "\n\n===cut_all_borders thrid-pass===\n\n";
         }
-        std::cout << "\n\n===cut_all_borders thrid-pass===\n\n";
     }
 
     // - walk over all node-versions
@@ -223,4 +223,3 @@ public:
 }; // class Cut_all_bordersPassThree
 
 #endif // SPLITTER_CUT_ALL_BORDERS_HPP
-
